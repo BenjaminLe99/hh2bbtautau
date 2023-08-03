@@ -62,8 +62,19 @@ def add_config(
         "qcd",
         "h",
         "hh_ggf_bbtautau",
+        "hh_vbf_bbtautau",
         "graviton_hh_ggf_bbtautau_m400",
+        "graviton_hh_vbf_bbtautau_m400",
+        "graviton_hh_ggf_bbtautau_m800",
+        "graviton_hh_vbf_bbtautau_m800",
+        "graviton_hh_ggf_bbtautau_m1750",
+        "graviton_hh_vbf_bbtautau_m1750",
         "graviton_hh_ggf_bbtautau_m1250",
+        "graviton_hh_vbf_bbtautau_m1250",
+        "graviton_hh_ggf_bbtautau_m1500",
+        "graviton_hh_vbf_bbtautau_m1500",
+        "graviton_hh_ggf_bbtautau_m2000",
+        "graviton_hh_vbf_bbtautau_m2000",
     ]
     for process_name in process_names:
         # development switch in case datasets are not _yet_ there
@@ -139,8 +150,20 @@ def add_config(
         "tth_nonbb_powheg",
         # signals
         "hh_ggf_bbtautau_madgraph",
+        "hh_vbf_bbtautau_madgraph",
         "graviton_hh_ggf_bbtautau_m400_madgraph",
+        "graviton_hh_vbf_bbtautau_m400_madgraph",
+        "graviton_hh_ggf_bbtautau_m800_madgraph",
+        "graviton_hh_vbf_bbtautau_m800_madgraph",
+        "graviton_hh_ggf_bbtautau_m1750_madgraph",
+        "graviton_hh_vbf_bbtautau_m1750_madgraph",
         "graviton_hh_ggf_bbtautau_m1250_madgraph",
+        "graviton_hh_vbf_bbtautau_m1250_madgraph",
+        "graviton_hh_ggf_bbtautau_m1500_madgraph",
+        "graviton_hh_vbf_bbtautau_m1500_madgraph",
+        "graviton_hh_ggf_bbtautau_m2000_madgraph",
+        "graviton_hh_vbf_bbtautau_m2000_madgraph",
+
     ]
     for dataset_name in dataset_names:
         # development switch in case datasets are not _yet_ there
@@ -642,8 +665,12 @@ def add_config(
             # general event info
             "run", "luminosityBlock", "event",
             # object info
-            "Jet.pt", "Jet.eta", "Jet.phi", "Jet.mass", "Jet.btagDeepFlavB", "Jet.hadronFlavour",
-            "Jet.hhbtag",
+            "Jet.p", "Jet.pt", "Jet.eta", "Jet.phi", "Jet.mass", "Jet.btagDeepFlavB", "Jet.hadronFlavour",
+            "Jet.hhbtag", "Jet.E", "nJet", "Jet.area", "Jet.nConstituents", "Jet.jetID",
+            "BJet.*",
+            "VBFJet.p_mag", "VBFJet.pt", "VBFJet.eta", "VBFJet.phi", "VBFJet.mass", "VBFJet.E",
+            "mjj",
+            "Delta_r_Jet", "Delta_r_BJet", "Delta_r_Tau",
             "HHBJet.pt", "HHBJet.eta", "HHBJet.phi", "HHBJet.mass", "HHBJet.btagDeepFlavB",
             "HHBJet.hadronFlavour", "HHBJet.hhbtag",
             "NonHHBJet.pt", "NonHHBJet.eta", "NonHHBJet.phi", "NonHHBJet.mass",
@@ -651,7 +678,7 @@ def add_config(
             "Electron.pt", "Electron.eta", "Electron.phi", "Electron.mass", "Electron.deltaEtaSC",
             "Electron.pfRelIso03_all",
             "Muon.pt", "Muon.eta", "Muon.phi", "Muon.mass", "Muon.pfRelIso04_all",
-            "Tau.pt", "Tau.eta", "Tau.phi", "Tau.mass", "Tau.idDeepTau2017v2p1VSe",
+            "Tau.p", "Tau.pt", "Tau.eta", "Tau.phi", "Tau.mass", "Tau.e", "Tau.charge","Tau.idDeepTau2017v2p1VSe",
             "Tau.idDeepTau2017v2p1VSmu", "Tau.idDeepTau2017v2p1VSjet", "Tau.genPartFlav",
             "Tau.decayMode",
             "MET.pt", "MET.phi", "MET.significance", "MET.covXX", "MET.covXY", "MET.covYY",

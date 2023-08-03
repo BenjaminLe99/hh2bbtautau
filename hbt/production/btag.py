@@ -58,7 +58,7 @@ def normalized_btag_weights(self: Producer, events: ak.Array, **kwargs) -> ak.Ar
         # store them
         events = set_ak_column_f32(events, f"normalized_{weight_name}", norm_weight_per_pid)
         events = set_ak_column_f32(events, f"normalized_njet_{weight_name}", norm_weight_per_pid_njet)
-
+        
     return events
 
 
@@ -88,7 +88,7 @@ def normalized_btag_weights_requires(self: Producer, reqs: dict) -> None:
 @normalized_btag_weights.setup
 def normalized_btag_weights_setup(self: Producer, reqs: dict, inputs: dict) -> None:
     # load the selection stats
-    stats = inputs["selection_stats"]["collection"][0].load(formatter="json")
+    stats = inputs["selection_stats"]["collection"][0]["stats"].load(formatter="json")
 
     # get the unique process ids in that dataset
     key = "sum_mc_weight_selected_no_bjet_per_process_and_njet"
