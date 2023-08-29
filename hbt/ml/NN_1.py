@@ -65,6 +65,7 @@ class SimpleDNN(MLModel):
 
     def setup(self):
         # dynamically add variables for the quantities produced by this model
+      
         for proc in self.processes:
             if f"{self.cls_name}.score_{proc}" not in self.config_inst.variables:
                 self.config_inst.add_variable(
@@ -383,12 +384,12 @@ class SimpleDNN(MLModel):
         validation["prediction"] = call_func_safe(model.predict_on_batch, validation["inputs"])
 
         # create some confusion matrices
-        call_func_safe(plot_confusion, model, train, output, "train", self.process_insts)
-        call_func_safe(plot_confusion, model, validation, output, "validation", self.process_insts)
+        call_func_safe(plot_confusion, model, train, output, "train", self.process_insts, label=self.label)
+        call_func_safe(plot_confusion, model, validation, output, "validation", self.process_insts, label=self.label)
 
         # create some ROC curves
-        call_func_safe(plot_roc_ovr, model, train, output, "train", self.process_insts)
-        call_func_safe(plot_roc_ovr, model, validation, output, "validation", self.process_insts)
+        call_func_safe(plot_roc_ovr, model, train, output, "train", self.process_insts,label=self.label)
+        call_func_safe(plot_roc_ovr, model, validation, output, "validation", self.process_insts,label=self.label)
 
         # create plots for all output nodes
         call_func_safe(plot_output_nodes, model, train, validation, output, self.process_insts)
@@ -523,6 +524,8 @@ class SimpleDNN(MLModel):
             class_weight=self.cls_weight
         )
 
+
+
         # for layer in model.layers:
         #     from IPython import embed; embed();
         #     print(layer.output_shape)
@@ -531,6 +534,9 @@ class SimpleDNN(MLModel):
         # output.dump(model, formatter="tf_keras_model")
         output.parent.touch()
         model.save(output.path)
+        
+        
+        output.child("early_stopping_epoch.json", type="f").dump({"early_stopped_epoch":early_stopping.stopped_epoch}, formatter="json")
         self.instant_evaluate(task, model, train, validation, output)
 
         with open(f"{output.path}/model_history.pkl", "wb") as f:

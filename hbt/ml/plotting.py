@@ -24,8 +24,10 @@ def plot_loss(history, output) -> None:
     plt.style.use(mplhep.style.CMS)
 
     fig, ax = plt.subplots()
-    ax.plot(history["loss"])
-    ax.plot(history["val_loss"])
+    trainings_loss = history["loss"]
+    validation_loss = history["val_loss"]
+    ax.plot(trainings_loss)
+    ax.plot(validation_loss)
     ax.set(**{
         "ylabel": "Loss",
         "xlabel": "Epoch",
@@ -34,6 +36,9 @@ def plot_loss(history, output) -> None:
     mplhep.cms.label(ax=ax, llabel="Work in progress", data=False)
 
     output.child("Loss.pdf", type="f").dump(fig, formatter="mpl")
+
+    json_metric = {"training_loss":trainings_loss, "validation_loss":validation_loss}
+    output.child("loss.json", type="f").dump(json_metric, formatter="json")
 
 
 def plot_accuracy(history, output) -> None:
@@ -44,8 +49,11 @@ def plot_accuracy(history, output) -> None:
     plt.style.use(mplhep.style.CMS)
 
     fig, ax = plt.subplots()
-    ax.plot(history["categorical_accuracy"])
-    ax.plot(history["val_categorical_accuracy"])
+
+    categorial_acc = history["categorical_accuracy"]
+    validation_categorial_acc = history["val_categorical_accuracy"]
+    ax.plot(categorial_acc)
+    ax.plot(validation_categorial_acc)
     ax.set(**{
         "ylabel": "Accuracy",
         "xlabel": "Epoch",
@@ -56,19 +64,25 @@ def plot_accuracy(history, output) -> None:
     output.child("Accuracy.pdf", type="f").dump(fig, formatter="mpl")
 
 
+    # save metric as json
+    json_metric = {"training_categorial_accuracy":categorial_acc, "validation_categorial_accuracy":validation_categorial_acc}
+    json_path = "accuracy.json"
+    output.child(json_path, type="f").dump(json_metric, formatter="json")
+
+
 def plot_confusion(
         model: tf.keras.models.Model,
         inputs: DotDict,
         output: law.FileSystemDirectoryTarget,
         input_type: str,
         process_insts: tuple[od.Process],
+        label=None
 ) -> None:
     """
     Simple function to create and store a confusion matrix plot
     """
     # use CMS plotting style
     plt.style.use(mplhep.style.CMS)
-
     from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
     # Create confusion matrix and normalizes it over predicted (columns)
@@ -79,21 +93,13 @@ def plot_confusion(
         normalize="true",
     )
 
-    labels =[
-    '$HH_{ggf,SM}$',
-    '$HH_{ggf,m400,Graviton}$',
-    '$HH_{vbf,m400, Graviton}$',
-    # '$HH_{ggf,m800,Graviton}$',
-    # '$HH_{vbf,m800, Graviton}$',
-    # '$HH_{ggf,m1750,Graviton}$',
-    # '$HH_{vbf,m1750,Graviton}$',
-    ]
+
     #labels = [proc_inst.label for proc_inst in process_insts] if process_insts else None
     #from IPython import embed; embed();
 
     # Create a plot of the confusion matrix
     fig, ax = plt.subplots()
-    matrix_display = ConfusionMatrixDisplay(confusion, display_labels=labels)
+    matrix_display = ConfusionMatrixDisplay(confusion, display_labels=label)
     matrix_display.plot(ax=ax)
     matrix_display.im_.set_clim(0, 1)
     #ConfusionMatrixDisplay(confusion, display_labels=labels).plot(ax=ax)
@@ -110,6 +116,7 @@ def plot_roc_ovr(
         output: law.FileSystemDirectoryTarget,
         input_type: str,
         process_insts: tuple[od.Process],
+        label=None
 ) -> None:
     """
     Simple function to create and store some ROC plots;
@@ -142,22 +149,23 @@ def plot_roc_ovr(
     ax.set_ylabel("Signal selection efficiency (TPR)")
 
     # legend
-    labels =[
-    '$HH_{ggf,SM}$',
-    '$HH_{ggf,m400,Graviton}$',
-    '$HH_{vbf,m400, Graviton}$',
-    # '$HH_{ggf,m800,Graviton}$',
-    # '$HH_{vbf,m800, Graviton}$',
-    # '$HH_{ggf,m1750,Graviton}$',
-    # '$HH_{vbf,m1750,Graviton}$',
-    ]
-    ax.legend(
-        [f"Signal: {labels[i]} (AUC: {auc_score:.4f})" for i, auc_score in enumerate(auc_scores)],
-        loc="best",
-    )
+    labels = label
+    auc_legend = []
+    for i, auc_score in enumerate(auc_scores):
+        legend_label = f"Signal:{labels[i]} (AUC:{auc_score:.4f})"
+        auc_legend.append(legend_label)
+
+    ax.legend(auc_legend,loc="best")
     mplhep.cms.label(ax=ax, llabel="Work in progress", data=False, loc=2)
 
     output.child(f"ROC_ovr_{input_type}.pdf", type="f").dump(fig, formatter="mpl")
+
+    # save metric as json
+    json_metric = {"auc_score":auc_scores}
+    json_path = "auc_score.json"
+    output.child(json_path, type="f").dump(json_metric, formatter="json")
+
+
 
 
 def plot_output_nodes(

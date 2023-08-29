@@ -75,6 +75,10 @@ def add_config(
         "graviton_hh_vbf_bbtautau_m1500",
         "graviton_hh_ggf_bbtautau_m2000",
         "graviton_hh_vbf_bbtautau_m2000",
+        "graviton_hh_ggf_bbtautau_m2500",
+        "graviton_hh_vbf_bbtautau_m2500",
+        "graviton_hh_ggf_bbtautau_m3000",
+        "graviton_hh_vbf_bbtautau_m3000",
     ]
     for process_name in process_names:
         # development switch in case datasets are not _yet_ there
@@ -163,6 +167,10 @@ def add_config(
         "graviton_hh_vbf_bbtautau_m1500_madgraph",
         "graviton_hh_ggf_bbtautau_m2000_madgraph",
         "graviton_hh_vbf_bbtautau_m2000_madgraph",
+        "graviton_hh_ggf_bbtautau_m2500_madgraph",
+        "graviton_hh_vbf_bbtautau_m2500_madgraph",
+        "graviton_hh_ggf_bbtautau_m3000_madgraph",
+        "graviton_hh_vbf_bbtautau_m3000_madgraph",
 
     ]
     for dataset_name in dataset_names:

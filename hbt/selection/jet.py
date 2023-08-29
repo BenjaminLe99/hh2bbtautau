@@ -12,6 +12,7 @@ from columnflow.util import maybe_import
 from columnflow.columnar_util import set_ak_column
 
 from hbt.production.hhbtag import hhbtag
+from hbt.production.VBFcuts import gen_HH_decay_product_VBF_sel
 
 
 np = maybe_import("numpy")
@@ -29,6 +30,7 @@ ak = maybe_import("awkward")
         "nFatJet", "FatJet.pt", "FatJet.eta", "FatJet.phi", "FatJet.mass", "FatJet.msoftdrop",
         "FatJet.jetId", "FatJet.subJetIdx1", "FatJet.subJetIdx2",
         "nSubJet", "SubJet.pt", "SubJet.eta", "SubJet.phi", "SubJet.mass", "SubJet.btagDeepB",
+        "Genpart.*", gen_HH_decay_product_VBF_sel
     },
     produces={
         # new columns
@@ -190,6 +192,11 @@ def jet_selection(
     non_hhbjet_indices = ak.values_astype(ak.fill_none(non_hhbjet_indices, 0), np.int32)
     fatjet_indices = ak.values_astype(fatjet_indices, np.int32)
     vbfjet_indices = ak.values_astype(ak.fill_none(vbfjet_indices, 0), np.int32)
+
+    if self.dataset_inst.has_tag("is_vbf"): # and self.get("dataset_inst", False):
+        VBF_sel = self[gen_HH_decay_product_VBF_sel](events, **kwargs)
+        # If VBF is considered, fuse VBF_sel and jet_sel using logical and, excludes VHH events
+        jet_sel = np.logical_and(jet_sel, VBF_sel)
 
     # store some columns
     events = set_ak_column(events, "Jet.hhbtag", hhbtag_scores)
