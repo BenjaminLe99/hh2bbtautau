@@ -138,6 +138,97 @@ cls_dict["dataset_names"] = {
 
 test_dnn = SimpleDNN.derive("test", cls_dict=cls_dict)
 
+#Combined model
+combined_dict = default_cls_dict.copy()
+combinedup = {
+    "epochs": 200,
+    "layers": [256, 256, 256, 256, 256, 256, 256, 1],
+    "activation": ["elu", "elu", "elu", "elu", "elu", "elu", "elu", 'sigmoid'],
+    "l2_factor": 0.01,
+    "learningrate": 0.01,
+    "folds": 4,
+    "batchsize": 256,
+    "early_stopping_patience":int(200/3),
+    "scheduler_factor":0.5,
+    "scheduler_patience":int(200/15),
+
+    "processes": [
+        "graviton_hh_ggf_bbtautau_m400",
+        "graviton_hh_vbf_bbtautau_m400",
+        "graviton_hh_ggf_bbtautau_m800",
+        "graviton_hh_vbf_bbtautau_m800",
+        "graviton_hh_ggf_bbtautau_m1250",
+        "graviton_hh_vbf_bbtautau_m1250",
+    ],
+    "ml_process_weights":{
+        "graviton_hh_ggf_bbtautau_m400": 1,
+        "graviton_hh_vbf_bbtautau_m400": 1,
+        "graviton_hh_ggf_bbtautau_m800": 1,
+        "graviton_hh_vbf_bbtautau_m800": 1,
+        "graviton_hh_ggf_bbtautau_m1250": 1,
+        "graviton_hh_vbf_bbtautau_m1250": 1,
+    },
+    "dataset_names": {
+        "graviton_hh_ggf_bbtautau_m400_madgraph",
+        "graviton_hh_vbf_bbtautau_m400_madgraph",
+        "graviton_hh_ggf_bbtautau_m800_madgraph",
+        "graviton_hh_vbf_bbtautau_m800_madgraph",
+        "graviton_hh_ggf_bbtautau_m1250_madgraph",
+        "graviton_hh_vbf_bbtautau_m1250_madgraph",
+    },
+    "label": [
+        '$HH_{ggf,m400,Graviton}$',
+        '$HH_{vbf,m400,Graviton}$',
+        '$HH_{ggf,m800,Graviton}$',
+        '$HH_{vbf,m800,Graviton}$',
+        '$HH_{ggf,m1250,Graviton}$',
+        '$HH_{vbf,m1250,Graviton}$',
+    ],
+
+}
+combined_dict.update(combinedup)
+
+combined_dnn = SimpleDNN.derive("combined", cls_dict=combined_dict)
+
+#Combined model
+combined400only_dict = default_cls_dict.copy()
+combined400onlyup = {
+    "epochs": 200,
+    "layers": [256, 256, 256, 256, 256, 256, 256, 1],
+    "activation": ["elu", "elu", "elu", "elu", "elu", "elu", "elu", 'sigmoid'],
+    "l2_factor": 0.01,
+    "learningrate": 0.01,
+    "folds": 4,
+    "batchsize": 256,
+    "early_stopping_patience":int(200/3),
+    "scheduler_factor":0.5,
+    "scheduler_patience":int(200/15),
+    "processes": [
+        "graviton_hh_ggf_bbtautau_m400",
+        "graviton_hh_vbf_bbtautau_m400",
+
+    ],
+    "ml_process_weights":{
+        "graviton_hh_ggf_bbtautau_m400": 1,
+        "graviton_hh_vbf_bbtautau_m400": 1,
+
+    },
+    "dataset_names": {
+        "graviton_hh_ggf_bbtautau_m400_madgraph",
+        "graviton_hh_vbf_bbtautau_m400_madgraph",
+
+    },
+    "label": [
+        '$HH_{ggf,m400,Graviton}$',
+        '$HH_{vbf,m400,Graviton}$',
+
+    ],
+
+}
+combined400only_dict.update(combined400onlyup)
+
+combined400only_dnn = SimpleDNN.derive("combined400only", cls_dict=combined400only_dict)
+
 #m400 model
 m400_dict = default_cls_dict.copy()
 m400up = {

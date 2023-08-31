@@ -55,7 +55,7 @@ default_cls_dict = {
     "input_features": input_features,
     "label": label,
     "store_name": "inputs1",
-    "label_smoothing":0.1,
+    "label_smoothing":0,
 
     "early_stopping_patience":int(200/3),
 
