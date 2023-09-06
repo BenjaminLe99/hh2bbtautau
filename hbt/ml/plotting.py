@@ -50,8 +50,8 @@ def plot_accuracy(history, output) -> None:
 
     fig, ax = plt.subplots()
 
-    categorial_acc = history["categorical_accuracy"]
-    validation_categorial_acc = history["val_categorical_accuracy"]
+    categorial_acc = history["binary_accuracy"]
+    validation_categorial_acc = history["val_binary_accuracy"]
     ax.plot(categorial_acc)
     ax.plot(validation_categorial_acc)
     ax.set(**{
@@ -65,7 +65,7 @@ def plot_accuracy(history, output) -> None:
 
 
     # save metric as json
-    json_metric = {"training_categorial_accuracy":categorial_acc, "validation_categorial_accuracy":validation_categorial_acc}
+    json_metric = {"training_binary_accuracy":categorial_acc, "validation_binary_accuracy":validation_categorial_acc}
     json_path = "accuracy.json"
     output.child(json_path, type="f").dump(json_metric, formatter="json")
 
@@ -86,16 +86,14 @@ def plot_confusion(
     from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
     # Create confusion matrix and normalizes it over predicted (columns)
+    prediction_mapped = np.where(inputs["prediction"] > 0.5, 1,0)
+
     confusion = confusion_matrix(
-        y_true=np.argmax(inputs["target"], axis=-1),
-        y_pred=np.argmax(inputs["prediction"], axis=-1),
+        y_true=inputs["target"],
+        y_pred=prediction_mapped,
         sample_weight=inputs["weights"],
         normalize="true",
     )
-
-
-    #labels = [proc_inst.label for proc_inst in process_insts] if process_insts else None
-    #from IPython import embed; embed();
 
     # Create a plot of the confusion matrix
     fig, ax = plt.subplots()
@@ -167,6 +165,37 @@ def plot_roc_ovr(
 
 
 
+def plot_prediction_and_truth(
+        model: tf.keras.models.Model,
+        train: DotDict,
+        validation: DotDict,
+        output: law.FileSystemDirectoryTarget,
+        process_insts: tuple[od.Process],
+) -> None:
+    
+    for input_type, inputs in (("train", train), ("validation", validation)):    
+        inputs["target"] = tf.reshape(inputs["target"], (-1))
+        inputs["prediction"] = tf.reshape(inputs["prediction"], (-1))
+
+        fig,ax = plt.subplots()
+
+        ax.hist(inputs["target"], bins=50,  density=False, histtype='bar', color="red", label="Truth", stacked=False, alpha=0.5)
+        ax.hist(inputs["prediction"], bins=50,  density=False, histtype='bar', color="blue", label="Prediction", stacked=False, alpha=0.5)
+
+        ax.legend(loc="best")
+        ax.set(**{
+            "ylabel": "Entries",
+            "ylim": (0.00001, ax.get_ylim()[1]),
+            "xlim": (0, 1),
+            "xlabel": "VBF score",
+            "title" : input_type,
+        })
+
+        mplhep.cms.label(ax=ax, llabel="Work in progress", data=False, loc=0)
+        output.child(f"Node_{process_insts[0].name}.pdf", type="f").dump(fig, formatter="mpl")
+
+
+
 
 def plot_output_nodes(
         model: tf.keras.models.Model,
@@ -179,14 +208,35 @@ def plot_output_nodes(
     Function that creates a plot for each ML output node,
     displaying all processes per plot.
     """
+    #from IPython import embed; embed();
     # use CMS plotting style
-    n_classes = len(train["target"][0])
-    for i in range(n_classes):
-        fig, ax = plt.subplots()
+    datasets = ["_".join((proc.name,"madgraph")) for proc in process_insts]
+    var_title = f"Output node vbf"
 
-        var_title = f"Output node {process_insts[i].label}"
+    fig, ax = plt.subplots()
+    # prepare axes and legend
+    # dummy legend entries
+    ax.hist([], histtype="step", label="Training", color="black")
+    ax.hist([], histtype="step", label="Validation (scaled)", linestyle="dotted", color="black")
+    ax.set(**{
+        "ylabel": "Entries",
+        #"ylim": (0.00001, ax.get_ylim()[1]),
+        "xlim": (0, 1),
+    })
 
-        h = (
+    colors = ["red","blue","green","orange","black","purple"]
+
+    plot_kwargs = {
+        "ax": ax,
+        "label": [proc_inst.label.replace("graviton_hh_","").replace("bbtautau_","") for proc_inst in process_insts],
+        "color": [colors[index] for index, proc_inst in enumerate(process_insts)],
+        #"histtype": "fill",
+        #"stacked": True,
+        #"fill": True,
+    }
+
+
+    h = (
             hist.Hist.new
             .StrCat(["train", "validation"], name="type")
             .IntCat([], name="process", growth=True)
@@ -194,48 +244,52 @@ def plot_output_nodes(
             .Weight()
         )
 
-        for input_type, inputs in (("train", train), ("validation", validation)):
-            for j in range(n_classes):
-                inputs["target"] = tf.reshape(inputs["target"], (-1,n_classes))
-                inputs["prediction"] = tf.reshape(inputs["prediction"], (-1,n_classes))
+    for input_type, inputs in (("train", train), ("validation", validation)):
+        # create histogramm
 
 
-                mask = np.argmax(inputs["target"], axis=1) == j
-                fill_kwargs = {
-                    "type": input_type,
-                    "process": j,
-                    var_title: inputs["prediction"][:, i][mask],
-                    "weight": inputs["weights"][mask],
-                }
-                h.fill(**fill_kwargs)
-        plot_kwargs = {
-            "ax": ax,
-            "label": [proc_inst.label for proc_inst in process_insts],
-            "color": ["red", "blue"],
-        }
+        # convert array to tensorflow tensor
+        inputs["target"] = tf.reshape(inputs["target"], (-1,1))
+        inputs["prediction"] = tf.reshape(inputs["prediction"], (-1,1))
+        inputs["weights"] = tf.reshape(inputs["weights"], (-1,1))
 
-        # dummy legend entries
-        plt.hist([], histtype="step", label="Training", color="black")
-        plt.hist([], histtype="step", label="Validation (scaled)", linestyle="dotted", color="black")
+        for ind, dataset in enumerate(datasets):
+            # dataset mask
+            dataset_mask = inputs["dataset"] == dataset
+            masked_prediction = inputs["prediction"].numpy()[dataset_mask] # .reshape(len(inputs["prediction"][:])),
+            masked_weights = inputs["weights"][dataset_mask]
 
-        # plot training scores
-        h[{"type": "train"}].plot1d(**plot_kwargs)
+            # fill histogram
+            fill_kwargs = {
+                "type": input_type,
+                "process": ind,
+                var_title: masked_prediction,
+                "weight": masked_weights,
+            }
+            h.fill(**fill_kwargs)
 
-        # legend
-        ax.legend(loc="best")
+    # plot training scores
+    h[{"type": "train"}].plot1d(**plot_kwargs)
+    scale = h[{"type": "train"}].sum().value / h[{"type": "validation"}].sum().value
+    ax.legend(loc="best")
 
-        ax.set(**{
-            "ylabel": "Entries",
-            "ylim": (0.00001, ax.get_ylim()[1]),
-            "xlim": (0, 1),
-        })
+    (h[{"type": "validation"}] * scale).plot1d(**plot_kwargs, linestyle="dotted")
+        # target
+    
+    mplhep.cms.label(ax=ax, llabel="Work in progress", data=False, loc=0)
+    output.child(f"Node_{process_insts[0].name}.pdf", type="f").dump(fig, formatter="mpl")
 
-        # plot validation scores, scaled to train dataset
-        scale = h[{"type": "train"}].sum().value / h[{"type": "validation"}].sum().value
-        (h[{"type": "validation"}] * scale).plot1d(**plot_kwargs, linestyle="dotted")
 
-        mplhep.cms.label(ax=ax, llabel="Work in progress", data=False, loc=0)
-        output.child(f"Node_{process_insts[i].name}.pdf", type="f").dump(fig, formatter="mpl")
+
+
+
+
+
+
+
+
+
+
 
 def plot_shap_values(
         model: tf.keras.models.Model,

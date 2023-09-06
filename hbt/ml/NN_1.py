@@ -191,6 +191,66 @@ class SimpleDNN(MLModel):
         #
         # determine process of each dataset and count number of events & sum of eventweights for this process
         #
+    
+        def calculate_weights(config):
+            def weight_per_dataset_mass(events_per_dataset,process_class, weight_compared_to="m400"):     
+                """
+                Function to calculate weight for a process over masses.
+                *weight_compared_to* is the base weight, to which the weights are created
+                *process_class* is either vbf or ggf
+                """
+                # get dataset we want to use as base
+                key_of_base_weight = f"graviton_hh_{process_class}_bbtautau_{weight_compared_to}_madgraph"      
+                n_events_of_base_weight = events_per_dataset.get(key_of_base_weight)
+                # base weights are always 1, since we compare all weight in comparison to them
+                weights = {key_of_base_weight:1}
+                
+                # filter out datasets, we want to calculate the weight to
+                filtered_dataset = {key:events_per_dataset.get(key) for key in events_per_dataset.keys() if process_class in key}
+                # pop base key out
+                
+                _ = filtered_dataset.pop(key_of_base_weight)
+                for dataset_name in filtered_dataset:
+                    weight = n_events_of_base_weight/events_per_dataset.get(dataset_name)
+                    weights[dataset_name] = weight
+                return weights
+
+            def weight_per_dataset_class(events_per_dataset, weights_per_dataset,classes, compared_to):
+                weights = {}
+                events = {}
+                for cls in classes:
+                    events_of_dataset = [weights_per_dataset.get(key) * events_per_dataset.get(key) for key in events_per_dataset.keys() if cls in key]
+                    events[cls] = sum(events_of_dataset)
+
+                #base_comparison = events[compared_to]
+                for event_key, event_value in events.items():
+                    weights[event_key] = 1 / event_value
+                return weights
+
+            events_per_dataset = {}
+            # get N-events per dataset
+            for dataset, files in input["events"][self.config_inst.name].items():
+                dataset_inst = self.config_inst.get_dataset(dataset)
+                N_events = sum([len(ak.from_parquet(inp["mlevents"].fn)) for inp in files])
+                events_per_dataset[dataset_inst.name] = N_events
+            
+            vbf_weight = weight_per_dataset_mass(events_per_dataset,"vbf","m400")
+            ggf_weight = weight_per_dataset_mass(events_per_dataset,"ggf","m400")
+
+            combined_weight = {}
+            combined_weight.update(vbf_weight)
+            combined_weight.update(ggf_weight)
+
+            cls_weight = weight_per_dataset_class(events_per_dataset, combined_weight, ("vbf","ggf"), "ggf")
+
+            # combine weights to final weight
+            final_vbf_weight = {vbf_key:vbf_value * cls_weight.get("vbf") for vbf_key, vbf_value in vbf_weight.items()}
+            final_ggf_weight = {ggf_key:ggf_value * cls_weight.get("ggf") for ggf_key, ggf_value in ggf_weight.items()}
+
+            final_weights = {}
+            final_weights.update(final_vbf_weight)
+            final_weights.update(final_ggf_weight)      
+            return final_weights
 
         for dataset, files in input["events"][self.config_inst.name].items():
             t0 = time()
@@ -237,6 +297,11 @@ class SimpleDNN(MLModel):
 
         sum_nnweights_processes = {}
 
+
+        # calculate weight per class and mass
+        # keys are the dataset_name
+        samples_weight = calculate_weights(self.config_inst)
+
         for dataset, files in input["events"][self.config_inst.name].items():
             t0 = time()
             this_proc_idx = dataset_proc_idx[dataset]
@@ -272,6 +337,8 @@ class SimpleDNN(MLModel):
                         print(f"removing column {var}")
                         events = remove_ak_column(events, var)
                 
+                #add weights per dataset 
+
                 #from IPython import embed; embed();
 
                 # transform events into numpy ndarray
@@ -289,27 +356,48 @@ class SimpleDNN(MLModel):
                     raise Exception(f"Infinite values found in inputs from dataset {dataset}")
 
                 # create the truth values for the output layer
-                target = np.zeros((len(events), len(self.processes)))
-                target[:, this_proc_idx] = 1
+                target = np.zeros((len(events), 1))
                 
+                if "vbf" in dataset:
+                    target[:, 0] = 1
+                # is redundant, but more readible
+                elif "ggf" in dataset:
+                    target[:, 0] = 0
+                else:
+                    raise Exception("Neither VBF or GGF dataset is used")
+                
+                # shape of weights (n_events, 1)
+                sample_weights = np.ones((len(events), 1)) * samples_weight[dataset]
+                
+
                 if np.any(~np.isfinite(target)):
                     raise Exception(f"Infinite values found in target from dataset {dataset}")
+
+                dataset_name = np.full(shape=(len(events), 1),fill_value=dataset)
+                
+
                 if DNN_inputs["weights"] is None:
                     DNN_inputs["weights"] = weights
                     DNN_inputs["inputs"] = events
                     DNN_inputs["target"] = target
+                    DNN_inputs["sample_weight"] = sample_weights
+                    DNN_inputs["dataset"] = dataset_name
+
+
                 else:
                     DNN_inputs["weights"] = np.concatenate([DNN_inputs["weights"], weights])
                     DNN_inputs["inputs"] = np.concatenate([DNN_inputs["inputs"], events])
                     DNN_inputs["target"] = np.concatenate([DNN_inputs["target"], target])
-                
-                #standardization function
-                def standardize(dataset):
-                    mean = tf.math.reduce_mean(dataset, axis=0, keepdims=True)
-                    std = tf.math.reduce_std(dataset, axis=0, keepdims=True)
-                    dataset = (dataset - mean)/std
-                    return dataset
+                    DNN_inputs["sample_weight"] = np.concatenate([DNN_inputs["sample_weight"], sample_weights ]) 
+                    DNN_inputs["dataset"] = np.concatenate([DNN_inputs["dataset"], dataset_name ])
 
+
+                #standardization function
+            def standardize(dataset):
+                mean = tf.math.reduce_mean(dataset, axis=0, keepdims=True)
+                std = tf.math.reduce_std(dataset, axis=0, keepdims=True)
+                dataset = (dataset - mean)/std
+                return dataset
             logger.debug(f"   weights: {weights[:5]}")
             logger.debug(f"   Sum NN weights: {sum_nnweights}")
 
@@ -347,6 +435,8 @@ class SimpleDNN(MLModel):
         #standardize per feature
         train["inputs"] = np.apply_along_axis(standardize, 0, train["inputs"])
         validation["inputs"] = np.apply_along_axis(standardize, 0, validation["inputs"])
+
+        # get weights
 
         return train, validation
 
@@ -399,7 +489,7 @@ class SimpleDNN(MLModel):
             for var in ["p", "pt", "eta", "phi", "mass", "e"]] + ["mtautau", "mjj", "mbjetbjet", "mHH"]
 
         # create shap value plots
-        call_func_safe(plot_shap_values, model, train, output, self.process_insts, train["target"], input_features)
+        # call_func_safe(plot_shap_values, model, train, output, self.process_insts, train["target"], input_features)
 
         return
 
@@ -429,11 +519,11 @@ class SimpleDNN(MLModel):
 
         train, validation = self.prepare_inputs(task, input)
         # check for infinite values
-        for key in train.keys():
-            if np.any(~np.isfinite(train[key])):
-                raise Exception(f"Infinite values found in training {key}")
-            if np.any(~np.isfinite(validation[key])):
-                raise Exception(f"Infinite values found in validation {key}")
+        # for key in train.keys():
+        #     if np.any(~np.isfinite(train[key])):
+        #         raise Exception(f"Infinite values found in training {key}")
+        #     if np.any(~np.isfinite(validation[key])):
+        #         raise Exception(f"Infinite values found in validation {key}")
 
         gc.collect()
         logger.info("garbage collected")
@@ -441,10 +531,6 @@ class SimpleDNN(MLModel):
         #
         # model preparation
         #
-
-        n_inputs = len(self.input_features)
-
-        n_outputs = len(self.processes)
         
         from hbt.ml.model import ResidualNeuralNetwork
         #from IPython import embed; embed();
@@ -461,9 +547,10 @@ class SimpleDNN(MLModel):
             epsilon=1e-6, amsgrad=False,
         )
         model.compile(
-            loss=tf.keras.losses.CategoricalCrossentropy(label_smoothing=self.label_smoothing),
+            loss=tf.keras.losses.BinaryCrossentropy(label_smoothing=self.label_smoothing),
             optimizer=optimizer,
-            weighted_metrics=["categorical_accuracy"],
+            metrics=["binary_accuracy"],
+            weighted_metrics=[tf.keras.losses.BinaryCrossentropy()],
         )
         #
         # training
@@ -502,8 +589,8 @@ class SimpleDNN(MLModel):
 
         # tf_train = tf.data.Dataset.from_tensor_slices((train["inputs"], train["target"]))
         # tf_validate = tf.data.Dataset.from_tensor_slices((validation["inputs"], validation["target"]))
-        tf_train = [train['inputs'], train['target']]
-        tf_validation = [validation['inputs'], validation['target']]
+        tf_train = [train['inputs'], train['target'],train["sample_weight"]]
+        tf_validation = [validation['inputs'], validation['target'],validation["sample_weight"]]
 
         fit_kwargs = {
             "epochs": self.epochs,
@@ -521,7 +608,7 @@ class SimpleDNN(MLModel):
             validation_data=tf_validation,
             batch_size=self.batchsize,
             **fit_kwargs,
-            class_weight=self.cls_weight
+            #sample_weight=tf_train[2]
         )
 
 
