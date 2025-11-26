@@ -357,6 +357,7 @@ class _external_dnn(Producer):
             ] if t is not None
         ]
 
+        #from IPython import embed;embed(header=" string - 359 in /afs/desy.de/user/l/lebenjam/Master/hh2bbtautau/hbt/production/external_networks.py")
         # evaluate the model
         scores = self.evaluator(
             self.cls_name,
@@ -415,4 +416,6 @@ class torch_test_dnn(_external_dnn):
 
 
 class torch_simple_kl01(_external_dnn):
+    exposed = True
+class torch_test_dnn_be(_external_dnn):
     exposed = True

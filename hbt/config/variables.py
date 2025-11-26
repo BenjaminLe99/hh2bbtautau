@@ -884,6 +884,35 @@ def add_variables(config: od.Config) -> None:
             aux={"x_transformations": "equal_distance_with_indices"},
         )
 
+        add_variable(
+            config,
+            name=f"torch_test_dnn_{proc}_fine",
+            expression=f"torch_test_dnn_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            config,
+            name=f"torch_test_dnn_be_{proc}_fine",
+            expression=f"torch_test_dnn_be_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+    add_variable(
+        config,
+        name="jet1_pt_fine",
+        expression="Jet.pt[:,0]",
+        binning=(1000, 0.0, 400.0),
+        unit="GeV",
+        x_title=r"Leading jet $p_{T}$",
+        aux={"underflow": False},
+    )
+
+
 
 # helper to add a variable to the config with some defaults
 def add_variable(config: od.Config, *args, **kwargs) -> od.Variable:

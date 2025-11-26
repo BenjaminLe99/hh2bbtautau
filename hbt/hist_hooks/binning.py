@@ -76,7 +76,7 @@ def add_hooks(analysis_inst: od.Analysis) -> None:
             Determine new bin edges that result in a flat signal distribution. The edges are determined by the signal
             distribution, while the background distribution is used to ensure that the background yield in each bin is
             sufficient.
-            """
+            """           
             # prepare parameters
             ax = signal_hist.axes[variable_name]
             low_edge, max_edge = ax.edges[0], ax.edges[-1]
@@ -259,7 +259,10 @@ def add_hooks(analysis_inst: od.Analysis) -> None:
         # 3. apply to hists
         for config_inst, proc_hists in hists.items():
             for process_inst, h in proc_hists.items():
-                proc_hists[process_inst] = h[{h.axes[-1].name: hist.rebin(edges=flat_s_edges)}]
+                try:
+                    proc_hists[process_inst] = h[{h.axes[-1].name: hist.rebin(edges=flat_s_edges)}]    
+                except:
+                    from IPython import embed;embed(header=" string - 261 in /afs/desy.de/user/l/lebenjam/Master/hh2bbtautau/hbt/hist_hooks/binning.py")
 
         return hists
 

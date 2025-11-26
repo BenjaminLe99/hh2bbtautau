@@ -1765,6 +1765,9 @@ def add_config(
     # vbf models trained by cclub
     for fold in range(5):
         add_external(f"vbf_dnn_fold{fold}", (f"{central_hbt_dir}/run3_models/run3_vbf_dnn/model_fold{fold}.tgz", "v1"))
+    #add_external("torch_test_dnn", (f"{central_hbt_dir}/run3_models/run3_torch_test/run3_external_dnn.pt2", "v1"))
+    #add_external("torch_test_dnn_be", ("/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/test/long_test.pt2", "v1"))
+    add_external("torch_test_dnn_be", ("/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/test/test.pt2", "v1"))
 
     # run specific files
     if run == 2:

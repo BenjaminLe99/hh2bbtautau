@@ -31,7 +31,7 @@ def setup_plot_styles(config: od.Config) -> None:
     }
     legend = {
         "borderpad": 0, "borderaxespad": 1.2, "columnspacing": 1.8, "labelspacing": 0.28, "fontsize": 16,
-        "cf_line_breaks": True, "cf_short_labels": False,
+        # "cf_line_breaks": True, "cf_short_labels": False,
     }
     ratio = {
         "yloc": "center",
@@ -45,7 +45,8 @@ def setup_plot_styles(config: od.Config) -> None:
     # - shortened process labels
     # - changed annotation (channel) position to fit right under legend
     wide_legend = legend | {
-        "ncols": 3, "loc": "upper left", "cf_entries_per_column": legend_entries_per_column, "cf_short_labels": True,
+        "ncols": 3, "loc": "upper left",
+        # "cf_entries_per_column": legend_entries_per_column, "cf_short_labels": True,
     }
     annotate_wide = annotate | {
         "xy": (0.035, 0.765),
@@ -55,7 +56,7 @@ def setup_plot_styles(config: od.Config) -> None:
     # - process labels are not shortened
     # - annotation (channel) moved slightly down to fut under (now taller) legend
     wide_ext_legend = wide_legend | {
-        "cf_short_labels": False,
+        # "cf_short_labels": False,
     }
     annotate_wide_ext = annotate_wide | {
         "xy": (0.035, 0.750),

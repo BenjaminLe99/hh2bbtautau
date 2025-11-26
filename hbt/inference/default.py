@@ -516,3 +516,32 @@ def default_bin_opt(self):
 
     # repeat the cleanup
     self.init_cleanup()
+torch_test_no_shifts = default_no_shifts.derive(
+    "torch_test_no_shifts",
+    cls_dict={"variable": "torch_test_dnn_hh_fine"},
+)
+
+torch_test_be_no_shifts = default_no_shifts.derive(
+    "torch_test_be_no_shifts",
+    cls_dict={"variable": "torch_test_dnn_be_hh_fine"},
+)
+
+jet1_pt_no_shifts = default_no_shifts.derive(
+    "jet1_pt_no_shifts",
+    cls_dict={"variable": "jet1_pt_fine"},
+)
+
+torch_test_no_shifts = default_no_shifts.derive(
+    "torch_test_no_shifts",
+    cls_dict={"variable": "torch_test_dnn_hh_fine"},
+)
+
+torch_test_be_no_shifts = default_no_shifts.derive(
+    "torch_test_be_no_shifts",
+    cls_dict={"variable": "torch_test_dnn_be_hh_fine"},
+)
+
+jet1_pt_no_shifts = default_no_shifts.derive(
+    "jet1_pt_no_shifts",
+    cls_dict={"variable": "jet1_pt_fine"},
+)
