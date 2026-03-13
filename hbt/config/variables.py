@@ -782,7 +782,6 @@ def add_variables(config: od.Config) -> None:
         )
 
         add_variable(
-            config,
             name=f"torch_test_dnn_{proc}_fine",
             expression=f"torch_test_dnn_{proc}",
             binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
@@ -791,7 +790,6 @@ def add_variables(config: od.Config) -> None:
         )
 
         add_variable(
-            config,
             name=f"torch_test_dnn_be_{proc}_fine",
             expression=f"torch_test_dnn_be_{proc}",
             binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
@@ -799,32 +797,305 @@ def add_variables(config: od.Config) -> None:
             aux={"x_transformations": "equal_distance_with_indices"},
         )
 
-    add_variable(
-        config,
-        name="jet1_pt_fine",
-        expression="Jet.pt[:,0]",
-        binning=(1000, 0.0, 400.0),
-        unit="GeV",
-        x_title=r"Leading jet $p_{T}$",
-        aux={"underflow": False},
-    )
+        add_variable(
+            name=f"torch_network_0_{proc}_fine",
+            expression=f"torch_network_0_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
 
+        add_variable(
+            name=f"torch_network_1_{proc}_fine",
+            expression=f"torch_network_1_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
 
+        add_variable(
+            name=f"torch_network_4_{proc}_fine",
+            expression=f"torch_network_4_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
 
-# helper to add a variable to the config with some defaults
-def add_variable(config: od.Config, *args, **kwargs) -> od.Variable:
-    kwargs.setdefault("null_value", EMPTY_FLOAT)
+        add_variable(
+            name=f"torch_network_4_sam_{proc}_fine",
+            expression=f"torch_network_4_sam_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
 
-    # create the variable
-    variable = config.add_variable(*args, **kwargs)
+        add_variable(
+            name=f"torch_simple_dense_1_{proc}_fine",
+            expression=f"torch_simple_dense_1_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
 
-    # defaults
-    if not variable.has_aux("underflow"):
-        variable.x.underflow = True
-    if not variable.has_aux("overflow"):
-        variable.x.overflow = True
+        add_variable(
+            name=f"torch_dense_0_{proc}_fine",
+            expression=f"torch_dense_0_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
 
-    return variable
+        add_variable(
+            name=f"torch_lbn_2_kl0_{proc}_fine",
+            expression=f"torch_lbn_2_kl0_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_lbn_1_kl1_{proc}_fine",
+            expression=f"torch_lbn_1_kl1_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_lbn_1_kl5_{proc}_fine",
+            expression=f"torch_lbn_1_kl5_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_lbn_1_kl2p45_{proc}_fine",
+            expression=f"torch_lbn_1_kl2p45_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_lbn_1_kl0_pairs_kl1_{proc}_fine",
+            expression=f"torch_lbn_1_kl0_pairs_kl1_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_lbn_1_kl0_pairs_kl2p45_{proc}_fine",
+            expression=f"torch_lbn_1_kl0_pairs_kl2p45_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_lbn_1_kl0_pairs_kl5_{proc}_fine",
+            expression=f"torch_lbn_1_kl0_pairs_kl5_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_lbn_2_kl0_pairs_kl1_{proc}_fine",
+            expression=f"torch_lbn_2_kl0_pairs_kl1_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_lbn_2_kl0_pairs_kl5_{proc}_fine",
+            expression=f"torch_lbn_2_kl0_pairs_kl5_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_lbn_1_all_kl_{proc}_fine",
+            expression=f"torch_lbn_1_all_kl_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_lbn_3_kl0_prod20_{proc}_fine",
+            expression=f"torch_lbn_3_kl0_prod20_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_lbn_4_kl0_prod20_{proc}_fine",
+            expression=f"torch_lbn_4_kl0_prod20_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_lbn_debug_{proc}_fine",
+            expression=f"torch_lbn_debug_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_lbn_2_prod20vbf_kl0_diag111_{proc}_fine",
+            expression=f"torch_lbn_2_prod20vbf_kl0_diag111_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"a_bognet_test_{proc}_fine",
+            expression=f"a_bognet_test_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"Bogmod_1_{proc}_fine",
+            expression=f"Bogmod_1_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_sig_loss_big_batch_{proc}_fine",
+            expression=f"torch_sig_loss_big_batch_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_kl1_kt1_sig_loss_big_batch_{proc}_fine",
+            expression=f"torch_kl1_kt1_sig_loss_big_batch_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"torch_kl1_kt1_sig_loss_very_big_{proc}_fine",
+            expression=f"torch_kl1_kt1_sig_loss_very_big_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+        
+        lbn_names_list = [
+            "kl0_prod14_22pre",
+            "kl1_pair_kl2p45",
+            "kl0_prod20_fixed",
+            "kl0_kl5_bkg_weighted_up",
+            "kl0_kl1_bkg_weighted_up",
+            "kl0_kl2p45_bkg_weighted_up",
+            "kl0_bkg_weighted_up",
+            "kl1_bkg_weighted_up",
+            "kl2p45_bkg_weighted_up",
+            "kl5_bkg_weighted_up",
+            "all_kl_bkg_weighted_up",
+            "kl0_prod20",
+            "kl0_prod20_vbf_cut",
+            "kl0_weight_matrix_prod20_vbf",
+            "prod20vbf_kl0_diag111",
+            "prod20vbf_kl0_diag155",
+            "prod20vbf_kl0_wmtest1",
+            "prod20vbf_kl0_diag111_flats_test",
+            "prod20vbf_kl1_diag111_flats_test",
+            "prod20vbf_kl2p45_diag111_for_flat_s",
+            "prod20vbf_kl5_diag111_for_flat_s",
+            "prod20vbf_kl0_kl1_diag111_for_flat_s",
+            "prod20vbf_kl1_diag111_no_btag",
+            "prod20vbf_kl0_diag111_variance_test_1",
+            "prod20vbf_kl0_diag111_variance_test_2",
+            "prod20vbf_kl0_diag111_variance_test_3",
+            "prod20vbf_kl0_diag111_variance_test_4",
+            "prod20vbf_kl0_diag111_variance_test_5",
+        ]
+
+        for name in lbn_names_list:
+            add_variable(
+        
+            name=f"torch_lbn_1_{name}_{proc}_fine",
+            expression=f"torch_lbn_1_{name}_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+            
+        flat_s_names_list = [
+            "kl0_flat_s_test_1",
+            "kl1_flat_s_test_2"
+        ]
+
+        for name in flat_s_names_list:
+            add_variable(
+        
+            name=f"{name}_{proc}_fine",
+            expression=f"{name}_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+            
+        variance_models_list = [
+            "prod20vbf_kl0_diag111_variance_test_1",
+            "prod20vbf_kl0_diag111_variance_test_2",
+            "prod20vbf_kl0_diag111_variance_test_3",
+            "prod20vbf_kl0_diag111_variance_test_4",
+            "prod20vbf_kl0_diag111_variance_test_5"
+        ]
+
+        for name in variance_models_list:
+            add_variable(
+            name=f"torch_lbn_1_{name}_{proc}_equidistant",
+            expression=f"torch_lbn_1_{name}_{proc}",
+            binning=np.linspace(0.0, 1.0, 11).tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )     
+            
+        weight_matrix_models_list = [
+            "cross_entropy",
+            "cross_entropy_with_checkpoint",
+            "signal_focus",
+            "background_focus",
+            "ce_plus_sig_miss",
+            "ce_plus_bkg_miss",
+            "ce_plus_any_miss",
+            "bkg_focus_plus_bkg_miss",
+            "bkg_focus_plus_bkg_miss_plus_bkg_cross_on",
+            "all_bkg",
+            "all_bkg_plus_sig_miss",
+            "new_loss_implementation",
+            "new_implementation",
+            "test_regressed_nu",
+        ]
+
+        for name in weight_matrix_models_list:
+            add_variable(
+            name=f"{name}_{proc}_fine",
+            expression=f"{name}_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )     
+
     # end-to-end DNN outputs
     add_variable(
         name="e2e_model1_hh_fine",

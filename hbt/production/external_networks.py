@@ -347,9 +347,11 @@ class _external_dnn(Producer):
                 f.met_px, f.met_py, f.met_cov00, f.met_cov01, f.met_cov11,
                 f.vis_tau1_px, f.vis_tau1_py, f.vis_tau1_pz, f.vis_tau1_e,
                 f.vis_tau2_px, f.vis_tau2_py, f.vis_tau2_pz, f.vis_tau2_e,
-                f.bjet1_px, f.bjet1_py, f.bjet1_pz, f.bjet1_e, f.bjet1_tag_b, f.bjet1_tag_cvsb, f.bjet1_tag_cvsl,
+                f.bjet1_px, f.bjet1_py, f.bjet1_pz, f.bjet1_e, 
+                f.bjet1_tag_b, f.bjet1_tag_cvsb, f.bjet1_tag_cvsl,
                 f.bjet1_hhbtag,
-                f.bjet2_px, f.bjet2_py, f.bjet2_pz, f.bjet2_e, f.bjet2_tag_b, f.bjet2_tag_cvsb, f.bjet2_tag_cvsl,
+                f.bjet2_px, f.bjet2_py, f.bjet2_pz, f.bjet2_e,
+                f.bjet2_tag_b, f.bjet2_tag_cvsb, f.bjet2_tag_cvsl,
                 f.bjet2_hhbtag,
                 f.fatjet_px, f.fatjet_py, f.fatjet_pz, f.fatjet_e,
                 f.htt_e, f.htt_px, f.htt_py, f.htt_pz,
@@ -400,6 +402,8 @@ class _external_dnn(Producer):
                 "hbb_e", "hbb_px", "hbb_py", "hbb_pz",
                 "htthbb_e", "htthbb_px", "htthbb_py", "htthbb_pz",
                 "httfatjet_e", "httfatjet_px", "httfatjet_py", "httfatjet_pz",
+                "nu1_px","nu1_py","nu1_pz",
+                "nu2_px","nu2_py","nu2_pz",
             ]
             cat_inputs_cols = [
                 "pair_type", "dm1", "dm2", "vis_tau1_charge", "vis_tau2_charge", "has_jet_pair", "has_fatjet",
@@ -440,10 +444,10 @@ class _external_dnn(Producer):
 class torch_test_dnn(_external_dnn):
     exposed = True
 
-
 class torch_simple_kl01(_external_dnn):
     exposed = True
 
+<<<<<<< Updated upstream
 
 #
 # end-to-end model tests
@@ -493,4 +497,211 @@ class _e2e_dnn(_external_dnn):
 
 
 class e2e_model1(_e2e_dnn):
+=======
+class torch_test_dnn_be(_external_dnn):
+>>>>>>> Stashed changes
+    exposed = True
+
+class torch_dense_0(_external_dnn):
+    exposed = True
+
+class torch_network_0(_external_dnn):
+    exposed = True
+
+class torch_network_1(_external_dnn):
+    exposed = True
+
+class torch_network_4(_external_dnn):
+    exposed = True
+
+class torch_network_4_sam(_external_dnn):
+    exposed = True
+
+class torch_simple_dense_1(_external_dnn):
+    exposed = True
+
+class torch_lbn_2_kl0(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl1(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl5(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl2p45(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl0_pairs_kl1(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl0_pairs_kl2p45(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl0_pairs_kl5(_external_dnn):
+    exposed = True
+
+class torch_lbn_2_kl0_pairs_kl1(_external_dnn):
+    exposed = True
+
+class torch_lbn_2_kl0_pairs_kl5(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_all_kl(_external_dnn):
+    exposed = True
+
+class torch_lbn_3_kl0_prod20(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl0_prod14_22pre(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl1_pair_kl2p45(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl0_prod20_fixed(_external_dnn):
+    exposed = True
+
+class torch_lbn_debug_test(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl0_kl5_bkg_weighted_up(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl0_kl1_bkg_weighted_up(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl0_kl2p45_bkg_weighted_up(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl0_bkg_weighted_up(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl1_bkg_weighted_up(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl2p45_bkg_weighted_up(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl5_bkg_weighted_up(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_all_kl_bkg_weighted_up(_external_dnn):
+    exposed = True
+
+class torch_lbn_4_kl0_prod20(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl0_prod20_vbf_cut(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_kl0_weight_matrix_prod20_vbf(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_prod20vbf_kl0_diag111(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_prod20vbf_kl0_diag155(_external_dnn):
+    exposed = True
+
+class torch_lbn_2_prod20vbf_kl0_diag111(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_prod20vbf_kl0_wmtest1(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_prod20vbf_kl0_diag111_flats_test(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_prod20vbf_kl1_diag111_flats_test(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_prod20vbf_kl2p45_diag111_for_flat_s(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_prod20vbf_kl5_diag111_for_flat_s(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_prod20vbf_kl0_kl1_diag111_for_flat_s(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_prod20vbf_kl1_diag111_no_btag(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_prod20vbf_kl0_diag111_variance_test_1(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_prod20vbf_kl0_diag111_variance_test_2(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_prod20vbf_kl0_diag111_variance_test_3(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_prod20vbf_kl0_diag111_variance_test_4(_external_dnn):
+    exposed = True
+
+class torch_lbn_1_prod20vbf_kl0_diag111_variance_test_5(_external_dnn):
+    exposed = True
+
+class a_bognet_test(_external_dnn):
+    exposed = True
+
+class torch_sig_loss_big_batch(_external_dnn):
+    exposed = True
+
+class torch_kl1_kt1_sig_loss_big_batch(_external_dnn):
+    exposed = True
+
+class torch_kl1_kt1_sig_loss_very_big(_external_dnn):
+    exposed = True
+
+class kl0_flat_s_test_1(_external_dnn):
+    exposed = True
+
+class kl1_flat_s_test_2(_external_dnn):
+    exposed = True
+
+class Bogmod_1(_external_dnn):
+    exposed = True
+
+class cross_entropy(_external_dnn):
+    exposed = True
+
+class cross_entropy_with_checkpoint(_external_dnn):
+    exposed = True
+
+class signal_focus(_external_dnn):
+    exposed = True
+
+class background_focus(_external_dnn):
+    exposed = True
+
+class ce_plus_sig_miss(_external_dnn):
+    exposed = True
+
+class ce_plus_bkg_miss(_external_dnn):
+    exposed = True
+
+class ce_plus_any_miss(_external_dnn):
+    exposed = True
+
+class bkg_focus_plus_bkg_miss(_external_dnn):
+    exposed = True
+
+class bkg_focus_plus_bkg_miss_plus_bkg_cross_on(_external_dnn):
+    exposed = True
+
+class all_bkg(_external_dnn):
+    exposed = True
+
+class all_bkg_plus_sig_miss(_external_dnn):
+    exposed = True
+
+class new_loss_implementation(_external_dnn):
+    exposed = True
+
+class new_implementation(_external_dnn):
+    exposed = True
+
+class test_regressed_nu(_external_dnn):
     exposed = True

@@ -547,17 +547,372 @@ jet1_pt_no_shifts = default_no_shifts.derive(
     cls_dict={"variable": "jet1_pt_fine"},
 )
 
-torch_test_no_shifts = default_no_shifts.derive(
-    "torch_test_no_shifts",
-    cls_dict={"variable": "torch_test_dnn_hh_fine"},
+torch_network_0_no_shifts = default_no_shifts.derive(
+    "torch_network_0_no_shifts",
+    cls_dict={"variable": "torch_network_0_hh_fine"},
 )
 
-torch_test_be_no_shifts = default_no_shifts.derive(
-    "torch_test_be_no_shifts",
-    cls_dict={"variable": "torch_test_dnn_be_hh_fine"},
+torch_network_1_no_shifts = default_no_shifts.derive(
+    "torch_network_1_no_shifts",
+    cls_dict={"variable": "torch_network_1_hh_fine"},
 )
 
-jet1_pt_no_shifts = default_no_shifts.derive(
-    "jet1_pt_no_shifts",
-    cls_dict={"variable": "jet1_pt_fine"},
+torch_network_4_no_shifts = default_no_shifts.derive(
+    "torch_network_4_no_shifts",
+    cls_dict={"variable": "torch_network_4_hh_fine"},
+)
+
+torch_network_4_sam_no_shifts = default_no_shifts.derive(
+    "torch_network_4_sam_no_shifts",
+    cls_dict={"variable": "torch_network_4_sam_hh_fine"},
+)
+
+torch_simple_dense_1 = default_no_shifts.derive(
+    "torch_simple_dense_1_no_shifts",
+    cls_dict={"variable": "torch_simple_dense_1_hh_fine"},
+)
+
+torch_dense_0 = default_no_shifts.derive(
+    "torch_dense_0_no_shifts",
+    cls_dict={"variable": "torch_dense_0_hh_fine"},
+)
+
+torch_lbn_2_kl0 = default_no_shifts.derive(
+    "torch_lbn_2_kl0_no_shifts",
+    cls_dict={"variable": "torch_lbn_2_kl0_hh_fine"},
+)
+
+torch_lbn_1_kl1 = default_no_shifts.derive(
+    "torch_lbn_1_kl1_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl1_hh_fine"},
+)
+
+torch_lbn_1_kl5 = default_no_shifts.derive(
+    "torch_lbn_1_kl5_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl5_hh_fine"},
+)
+
+torch_lbn_1_kl2p45 = default_no_shifts.derive(
+    "torch_lbn_1_kl2p45_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl2p45_hh_fine"},
+)
+
+torch_lbn_1_kl0_pairs_kl1 = default_no_shifts.derive(
+    "torch_lbn_1_kl0_pairs_kl1_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl0_pairs_kl1_hh_fine"},
+)
+
+torch_lbn_1_kl0_pairs_kl2p45 = default_no_shifts.derive(
+    "torch_lbn_1_kl0_pairs_kl2p45_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl0_pairs_kl2p45_hh_fine"},
+)
+
+torch_lbn_1_kl0_pairs_kl5 = default_no_shifts.derive(
+    "torch_lbn_1_kl0_pairs_kl5_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl0_pairs_kl5_hh_fine"},
+)
+
+torch_lbn_2_kl0_pairs_kl1 = default_no_shifts.derive(
+    "torch_lbn_2_kl0_pairs_kl1_no_shifts",
+    cls_dict={"variable": "torch_lbn_2_kl0_pairs_kl1_hh_fine"},
+)
+
+torch_lbn_2_kl0_pairs_kl5 = default_no_shifts.derive(
+    "torch_lbn_2_kl0_pairs_kl5_no_shifts",
+    cls_dict={"variable": "torch_lbn_2_kl0_pairs_kl5_hh_fine"},
+)
+
+torch_lbn_1_all_kl = default_no_shifts.derive(
+    "torch_lbn_1_all_kl_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_all_kl_hh_fine"},
+)
+
+torch_lbn_3_kl0_prod20 = default_no_shifts.derive(
+    "torch_lbn_3_kl0_prod20_no_shifts",
+    cls_dict={"variable": "torch_lbn_3_kl0_prod20_hh_fine"},
+)
+
+torch_lbn_3_kl0_prod20_no_vbf_no_shifts = default_no_shifts_no_vbf.derive(
+    "torch_lbn_3_kl0_prod20_no_vbf_no_shifts",
+    cls_dict={"variable": "torch_lbn_3_kl0_prod20_hh_fine"},
+)
+
+torch_lbn_1_kl0_prod14_22pre_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_kl0_prod14_22pre_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl0_prod14_22pre_hh_fine"},
+)
+
+torch_lbn_1_kl1_pair_kl2p45_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_kl1_pair_kl2p45_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl1_pair_kl2p45_hh_fine"},
+)
+
+torch_lbn_1_kl0_prod20_fixed_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_kl0_prod20_fixed_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl0_prod20_fixed_hh_fine"},
+)
+
+torch_lbn_debug_no_shifts = default_no_shifts.derive(
+    "torch_lbn_debug_no_shifts",
+    cls_dict={"variable": "torch_lbn_debug_hh_fine"},
+)
+
+torch_lbn_1_kl0_kl5_bkg_weighted_up_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_kl0_kl5_bkg_weighted_up_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl0_kl5_bkg_weighted_up_hh_fine"},
+)
+
+torch_lbn_1_kl0_kl1_bkg_weighted_up_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_kl0_kl1_bkg_weighted_up_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl0_kl1_bkg_weighted_up_hh_fine"},
+)
+
+torch_lbn_1_kl0_kl2p45_bkg_weighted_up_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_kl0_kl2p45_bkg_weighted_up_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl0_kl2p45_bkg_weighted_up_hh_fine"},
+)
+
+torch_lbn_1_kl0_bkg_weighted_up_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_kl0_bkg_weighted_up_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl0_bkg_weighted_up_hh_fine"},
+)
+
+torch_lbn_1_kl1_bkg_weighted_up_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_kl1_bkg_weighted_up_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl1_bkg_weighted_up_hh_fine"},
+)
+
+torch_lbn_1_kl2p45_bkg_weighted_up_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_kl2p45_bkg_weighted_up_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl2p45_bkg_weighted_up_hh_fine"},
+)
+
+torch_lbn_1_kl5_bkg_weighted_up_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_kl5_bkg_weighted_up_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl5_bkg_weighted_up_hh_fine"},
+)
+
+torch_lbn_1_all_kl_bkg_weighted_up_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_all_kl_bkg_weighted_up_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_all_kl_bkg_weighted_up_hh_fine"},
+)
+
+torch_lbn_4_kl0_prod20_no_shifts = default_no_shifts.derive(
+    "torch_lbn_4_kl0_prod20_no_shifts",
+    cls_dict={"variable": "torch_lbn_4_kl0_prod20_hh_fine"},
+)
+
+torch_lbn_1_kl0_prod20_vbf_cut_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_kl0_prod20_vbf_cut_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl0_prod20_vbf_cut_hh_fine"},
+)
+
+torch_lbn_1_kl0_weight_matrix_prod20_vbf_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_kl0_weight_matrix_prod20_vbf_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_kl0_weight_matrix_prod20_vbf_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl0_diag111_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_diag111_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_diag111_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl0_diag155_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_diag155_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_diag155_hh_fine"},
+)
+
+torch_lbn_2_prod20vbf_kl0_diag111_no_shifts = default_no_shifts.derive(
+    "torch_lbn_2_prod20vbf_kl0_diag111_no_shifts",
+    cls_dict={"variable": "torch_lbn_2_prod20vbf_kl0_diag111_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl0_wmtest1_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_wmtest1_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_wmtest1_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl0_diag111_flats_test_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_diag111_flats_test_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_diag111_flats_test_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl1_diag111_flats_test_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl1_diag111_flats_test_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl1_diag111_flats_test_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl2p45_diag111_for_flat_s_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl2p45_diag111_for_flat_s_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl2p45_diag111_for_flat_s_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl5_diag111_for_flat_s_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl5_diag111_for_flat_s_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl5_diag111_for_flat_s_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl0_kl1_diag111_for_flat_s_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_kl1_diag111_for_flat_s_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_kl1_diag111_for_flat_s_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl1_diag111_no_btag_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl1_diag111_no_btag_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl1_diag111_no_btag_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl0_diag111_variance_test_1_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_1_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_1_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl0_diag111_variance_test_2_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_2_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_2_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl0_diag111_variance_test_3_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_3_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_3_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl0_diag111_variance_test_4_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_4_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_4_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl0_diag111_variance_test_5_no_shifts = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_5_no_shifts",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_5_hh_fine"},
+)
+
+torch_lbn_1_prod20vbf_kl0_diag111_variance_test_1_no_shifts_equidistant = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_1_no_shifts_equidistant",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_1_hh_equidistant"},
+)
+
+torch_lbn_1_prod20vbf_kl0_diag111_variance_test_2_no_shifts_equidistant = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_2_no_shifts_equidistant",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_2_hh_equidistant"},
+)
+
+torch_lbn_1_prod20vbf_kl0_diag111_variance_test_3_no_shifts_equidistant = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_3_no_shifts_equidistant",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_3_hh_equidistant"},
+)
+
+torch_lbn_1_prod20vbf_kl0_diag111_variance_test_4_no_shifts_equidistant = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_4_no_shifts_equidistant",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_4_hh_equidistant"},
+)
+
+torch_lbn_1_prod20vbf_kl0_diag111_variance_test_5_no_shifts_equidistant = default_no_shifts.derive(
+    "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_5_no_shifts_equidistant",
+    cls_dict={"variable": "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_5_hh_equidistant"},
+)
+
+a_bognet_test_no_shifts = default_no_shifts.derive(
+    "a_bognet_test_no_shifts",
+    cls_dict={"variable": "a_bognet_test_hh_fine"},
+)
+
+torch_sig_loss_big_batch_no_shifts = default_no_shifts.derive(
+    "torch_sig_loss_big_batch_no_shifts",
+    cls_dict={"variable": "torch_sig_loss_big_batch_hh_fine"},
+)
+
+torch_kl1_kt1_sig_loss_big_batch_no_shifts = default_no_shifts.derive(
+    "torch_kl1_kt1_sig_loss_big_batch_no_shifts",
+    cls_dict={"variable": "torch_kl1_kt1_sig_loss_big_batch_hh_fine"},
+)
+
+torch_kl1_kt1_sig_loss_very_big_no_shifts = default_no_shifts.derive(
+    "torch_kl1_kt1_sig_loss_very_big_no_shifts",
+    cls_dict={"variable": "torch_kl1_kt1_sig_loss_very_big_hh_fine"},
+)
+
+kl0_flat_s_test_1_no_shifts = default_no_shifts.derive(
+    "kl0_flat_s_test_1_no_shifts",
+    cls_dict={"variable": "kl0_flat_s_test_1_hh_fine"},
+)
+
+kl1_flat_s_test_2_no_shifts = default_no_shifts.derive(
+    "kl1_flat_s_test_2_no_shifts",
+    cls_dict={"variable": "kl1_flat_s_test_2_hh_fine"},
+)
+
+Bogmod_1_no_shifts = default_no_shifts.derive(
+    "Bogmod_1_no_shifts",
+    cls_dict={"variable": "Bogmod_1_hh_fine"},
+)
+
+cross_entropy_no_shifts = default_no_shifts.derive(
+    "cross_entropy_no_shifts",
+    cls_dict={"variable": "cross_entropy_hh_fine"},
+)
+
+cross_entropy_with_checkpoint_no_shifts = default_no_shifts.derive(
+    "cross_entropy_with_checkpoint_no_shifts",
+    cls_dict={"variable": "cross_entropy_with_checkpoint_hh_fine"},
+)
+
+signal_focus_no_shifts = default_no_shifts.derive(
+    "signal_focus_no_shifts",
+    cls_dict={"variable": "signal_focus_hh_fine"},
+)
+
+background_focus_no_shifts = default_no_shifts.derive(
+    "background_focus_no_shifts",
+    cls_dict={"variable": "background_focus_hh_fine"},
+)
+
+ce_plus_sig_miss_no_shifts = default_no_shifts.derive(
+    "ce_plus_sig_miss_no_shifts",
+    cls_dict={"variable": "ce_plus_sig_miss_hh_fine"},
+)
+
+ce_plus_bkg_miss_no_shifts = default_no_shifts.derive(
+    "ce_plus_bkg_miss_no_shifts",
+    cls_dict={"variable": "ce_plus_bkg_miss_hh_fine"},
+)
+
+ce_plus_any_miss_no_shifts = default_no_shifts.derive(
+    "ce_plus_any_miss_no_shifts",
+    cls_dict={"variable": "ce_plus_any_miss_hh_fine"},
+)
+
+bkg_focus_plus_bkg_miss_no_shifts = default_no_shifts.derive(
+    "bkg_focus_plus_bkg_miss_no_shifts",
+    cls_dict={"variable": "bkg_focus_plus_bkg_miss_hh_fine"},
+)
+
+bkg_focus_plus_bkg_miss_plus_bkg_cross_on_no_shifts = default_no_shifts.derive(
+    "bkg_focus_plus_bkg_miss_plus_bkg_cross_on_no_shifts",
+    cls_dict={"variable": "bkg_focus_plus_bkg_miss_plus_bkg_cross_on_hh_fine"},
+)
+
+all_bkg_no_shifts = default_no_shifts.derive(
+    "all_bkg_no_shifts",
+    cls_dict={"variable": "all_bkg_hh_fine"},
+)
+
+all_bkg_plus_sig_miss_no_shifts = default_no_shifts.derive(
+    "all_bkg_plus_sig_miss_no_shifts",
+    cls_dict={"variable": "all_bkg_plus_sig_miss_hh_fine"},
+)
+
+new_loss_implementation_no_shifts = default_no_shifts.derive(
+    "new_loss_implementation_no_shifts",
+    cls_dict={"variable": "new_loss_implementation_hh_fine"},
+)
+
+new_implementation_no_shifts = default_no_shifts.derive(
+    "new_implementation_no_shifts",
+    cls_dict={"variable": "new_implementation_hh_fine"},
+)
+
+test_regressed_nu_no_shifts = default_no_shifts.derive(
+    "test_regressed_nu_no_shifts",
+    cls_dict={"variable": "test_regressed_nu_hh_fine"},
 )

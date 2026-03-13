@@ -241,20 +241,44 @@ def add_hooks(analysis_inst: od.Analysis) -> None:
         # note: for signal, this assumes that variable axes have the same name, but they probably always will
         signal_sum = sum((signal_hists := list(signal_hist.values()))[1:], signal_hists[0].copy())
         background_sum = sum((list(proc_hists.items()) for proc_hists in background_hists.values()), [])
+        
         flat_s_edges = find_edges(
             signal_hist=signal_sum,
             background_hists=background_sum,
             n_bins=n_bins,
         )
-        print(f"edges in {category_name}: {flat_s_edges.tolist()}")
+
+        # load bin edges from different datacard
+        # import numpy as np
+        # import json
+
+        # with open("flat_s_binning_test_1_bin_edges.json") as f:
+        #     flat_s_edges = np.array(json.load(f)[category_name])
+
+        # print(f"edges in {category_name}: {flat_s_edges.tolist()}")
+
+        # # block to save flat_s bin edges on the fly
+        # import json
+        # import os
+
+        # # change this when recording more flat_s bin edges
+        # FILENAME = "flat_s_binning_test_2_bin_edges.json"
+        # if os.path.exists(FILENAME):
+        #     with open(FILENAME) as f:
+        #         data = json.load(f)
+        # else:
+        #     data = {}
+        # # update category
+        # data[f"{category_name}"] = flat_s_edges.tolist()
+        # # save back
+        # with open(FILENAME, "w") as f:
+        #     json.dump(data, f, indent=2)
+
 
         # 3. apply to hists
         for config_inst, proc_hists in hists.items():
             for process_inst, h in proc_hists.items():
-                try:
-                    proc_hists[process_inst] = h[{h.axes[-1].name: hist.rebin(edges=flat_s_edges)}]    
-                except:
-                    from IPython import embed;embed(header=" string - 261 in /afs/desy.de/user/l/lebenjam/Master/hh2bbtautau/hbt/hist_hooks/binning.py")
+                proc_hists[process_inst] = h[{h.axes[-1].name: hist.rebin(edges=flat_s_edges)}]
 
         return hists
 

@@ -1906,6 +1906,113 @@ def add_config(
     add_external("torch_simple_kl01", (f"{central_hbt_dir}/run3_models/run3_torch_simple_kl01/comparison_dnn.pt2", "v3"))  # noqa: E501
     # e2e model test
     add_external("e2e_model1", (f"{central_hbt_dir}/run3_models/e2e_test/e2e_model1.pt2", "v1"))
+    # vbf models trained by cclub
+    for fold in range(5):
+        add_external(f"vbf_dnn_fold{fold}", (f"{central_hbt_dir}/run3_models/run3_vbf_dnn/model_fold{fold}.tgz", "v1"))
+    #add_external("torch_test_dnn", (f"{central_hbt_dir}/run3_models/run3_torch_test/run3_external_dnn.pt2", "v1"))
+    add_external("torch_simple_dense_1", ("/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/test/fold_0_simple_dense_0.pt2", "v1"))
+    add_external("torch_dense_0", ("/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/test/fold_0_torch_dense_0.pt2", "v1"))
+    add_external("torch_network_0", ("/data/dust/user/wiedersb/public/comparison_dnn.pt2", "v1"))
+    add_external("torch_network_1", ("/data/dust/user/wiedersb/public/marcels_model_fold_0_final_model.pt2", "v1"))
+    add_external("torch_network_4", ("/data/dust/user/wiedersb/HH_DNN/models/model_nr4_fold0.pt2", "v1"))
+    add_external("torch_network_4_sam", ("/data/dust/user/wiedersb/HH_DNN/models/model_nr4_sam_fold0.pt2", "v1"))
+
+    # single kappa lambda runs
+    add_external("torch_lbn_2_kl0", ("/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/lbns/lbn_1_singular_kl0_fold0_fold0.pt2", "v1"))
+    add_external("torch_lbn_1_kl1", ("/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/lbns/lbn_1_singular_kl1_fold0_fold0.pt2", "v1"))
+    add_external("torch_lbn_1_kl5", ("/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/lbns/lbn_1_singular_kl5_fold0_fold0.pt2", "v1"))
+    add_external("torch_lbn_1_kl2p45", ("/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/lbns/lbn_1_singular_kl2p45_fold0_fold0.pt2", "v1"))
+
+    # pairs with kappa lambda = 0 runs
+    add_external("torch_lbn_1_kl0_pairs_kl1", ("/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/lbns/lbn_1_kl0_pairs_kl1_fold0_fold0.pt2", "v1"))
+    add_external("torch_lbn_1_kl0_pairs_kl2p45", ("/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/lbns/lbn_1_kl0_pairs_kl2p45_fold0_fold0.pt2", "v1"))
+    add_external("torch_lbn_1_kl0_pairs_kl5", ("/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/lbns/lbn_1_kl0_pairs_kl5_fold0_fold0.pt2", "v1"))
+    add_external("torch_lbn_2_kl0_pairs_kl1", ("/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/lbns/lbn_2_kl0_pairs_kl1_fold0_fold0.pt2", "v1"))
+    add_external("torch_lbn_2_kl0_pairs_kl5", ("/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/lbns/lbn_2_kl0_pairs_kl5_fold0_fold0.pt2", "v1"))
+
+    # torch model trained on all kappa lambda
+    add_external("torch_lbn_1_all_kl", ("/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/lbns/lbn_1_all_kl_fold0_fold0.pt2", "v1"))
+
+    # bogdans models
+    add_external("a_bognet_test", ("/data/dust/user/wiedersb/HH_DNN/models/test_fold0.pt2", "v1"))
+    add_external("torch_sig_loss_big_batch", ("/data/dust/user/wiedersb/HH_DNN/models/test_big_batch_fold0.pt2", "v1"))
+    add_external("torch_kl1_kt1_sig_loss_big_batch", ("/data/dust/user/wiedersb/HH_DNN/models/test_big_batch_kl1_kt1_fold0.pt2", "v1"))
+    add_external("torch_kl1_kt1_sig_loss_very_big", ("/data/dust/user/wiedersb/HH_DNN/models/test_very_big_batch_kl1_kt1_fold0.pt2", "v1"))
+    add_external("Bogmod_1", ("/data/dust/user/wiedersb/HH_DNN/models/test_unc_b_0p0_fold0.pt2", "v1"))
+
+
+    lbnspath = "/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/lbns/"
+
+    lbn_modeldict = {
+        "torch_lbn_2_kl0_prod20":                                   "lbn_1_singular_kl0_prod20_fold0_fold0.pt2",
+        "torch_lbn_1_kl0_prod14_22pre":                             "lbn_1_singular_kl0_22pre_only_fold0_fold0.pt2",
+        "torch_lbn_1_kl1_pair_kl2p45":                              "lbn_1_kl1_pair_kl2p45_fold0_fold0.pt2",
+        "torch_lbn_1_kl0_prod20_fixed":                             "lbn_1_singular_kl0_prod20_fixed_fold0_fold0.pt2",
+        "torch_lbn_debug_test":                                     "lbn_debug_fold0_fold0.pt2",
+        "torch_lbn_1_kl0_kl5_bkg_weighted_up":                      "lbn_kl0_kl5_bkg_weighted_up_fold0_fold0.pt2",
+        "torch_lbn_1_kl0_bkg_weighted_up":                          "lbn_kl0_bkg_weighted_up_fold0_fold0.pt2",
+        "torch_lbn_1_kl1_bkg_weighted_up":                          "lbn_kl1_bkg_weighted_up_fold0_fold0.pt2",
+        "torch_lbn_1_kl2p45_bkg_weighted_up":                       "lbn_kl2p45_bkg_weighted_up_fold0_fold0.pt2",
+        "torch_lbn_1_kl5_bkg_weighted_up":                          "lbn_kl5_bkg_weighted_up_fold0_fold0.pt2",
+        "torch_lbn_1_all_kl_bkg_weighted_up":                       "lbn_all_kl_bkg_weighted_up_fold0_fold0.pt2",
+        "torch_lbn_1_kl0_kl1_bkg_weighted_up":                      "lbn_kl0_kl1_bkg_weighted_up_fold0_fold0.pt2",
+        "torch_lbn_1_kl0_kl2p45_bkg_weighted_up":                   "lbn_kl0_kl2p45_bkg_weighted_up_fold0_fold0.pt2",
+        "torch_lbn_4_kl0_prod20":                                   "lbn_kl0_prod20_fold0_fold0.pt2",
+        "torch_lbn_1_kl0_prod20_vbf_cut":                           "lbn_kl0_prod20_vbf_cut_fold0_fold0.pt2",
+        "torch_lbn_1_kl0_weight_matrix_prod20_vbf":                 "lbn_kl0_weight_matrix_prod20_vbf_fold0_fold0.pt2",
+        "torch_lbn_1_prod20vbf_kl0_diag111":                        "lbn_prod20vbf_kl0_diag111_v1_fold0_fold0.pt2",
+        "torch_lbn_1_prod20vbf_kl0_diag155":                        "lbn_prod20vbf_kl0_diag155_v1_fold0_fold0.pt2",
+        "torch_lbn_2_prod20vbf_kl0_diag111":                        "lbn_prod20vbf_kl0_diag111_v3_fold0_fold0.pt2",
+        "torch_lbn_1_prod20vbf_kl0_wmtest1":                        "lbn_prod20vbf_kl0_wmtest1_fold0_fold0.pt2",
+        "torch_lbn_1_prod20vbf_kl0_diag111_flats_test":             "lbn_prod20vbf_kl0_diag111_flats_test_fold0_fold0.pt2",
+        "torch_lbn_1_prod20vbf_kl1_diag111_flats_test":             "lbn_prod20vbf_kl1_diag111_flats_test_fold0_fold0.pt2",
+        "torch_lbn_1_prod20vbf_kl2p45_diag111_for_flat_s":          "lbn_prod20vbf_kl2p45_diag111_for_flat-s_fold0_fold0.pt2",
+        "torch_lbn_1_prod20vbf_kl5_diag111_for_flat_s":             "lbn_prod20vbf_kl5_diag111_for_flat-s_fold0_fold0.pt2",
+        "torch_lbn_1_prod20vbf_kl0_kl1_diag111_for_flat_s":         "lbn_prod20vbf_kl0_kl1_diag111_for_flat-s_fold0_fold0.pt2",
+        "torch_lbn_1_prod20vbf_kl1_diag111_no_btag":                "lbn_prod20vbf_kl1_diag111_no_btag_fold0_fold0.pt2",
+        "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_1":        "lbn_prod20vbf_kl0_diag111_variance_test_1_fold0_fold0.pt2",
+        "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_2":        "lbn_prod20vbf_kl0_diag111_variance_test_2_fold0_fold0.pt2",
+        "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_3":        "lbn_prod20vbf_kl0_diag111_variance_test_3_fold0_fold0.pt2",
+        "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_4":        "lbn_prod20vbf_kl0_diag111_variance_test_4_fold0_fold0.pt2",
+        "torch_lbn_1_prod20vbf_kl0_diag111_variance_test_5":        "lbn_prod20vbf_kl0_diag111_variance_test_5_fold0_fold0.pt2",
+    }
+    for key, value in lbn_modeldict.items():
+        add_external(key, (lbnspath + value, "v1"))
+
+    flat_s_test_path="/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/flat_s_binning_tests/"
+
+    flat_s_test_model_dict = {
+        "kl0_flat_s_test_1": "lbn_prod20vbf_kl0_diag111_flat_s_binning_test_1_fold0_fold0.pt2",
+        "kl1_flat_s_test_2": "lbn_prod20vbf_kl1_diag111_flat_s_binning_test_2_fold0_fold0.pt2",
+    }
+
+    for key, value in flat_s_test_model_dict.items():
+        add_external(key, (flat_s_test_path + value, "v1"))
+    
+
+    # trained on Kappa Lambda = 1
+    weight_matrix_path="/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/weight_matrix/"
+
+    weight_matrix_model_dict = {
+        "cross_entropy":                                "lbn_prod20vbf_kl1_diag111_fold0_fold0.pt2",
+        "cross_entropy_with_checkpoint":                "lbn_prod20vbf_kl1_diag111_with_checkpoint_fold0_fold0.pt2",
+        "signal_focus":                                 "lbn_prod20vbf_kl1_diag511_fold0_fold0.pt2",
+        "background_focus":                             "lbn_prod20vbf_kl1_diag155_fold0_fold0.pt2",
+        "ce_plus_sig_miss":                             "lbn_prod20vbf_kl1_wm_CE_plus_signal_misses_fold0_fold0.pt2",
+        "ce_plus_bkg_miss":                             "lbn_prod20vbf_kl1_wm_CE_plus_background_misses_fold0_fold0.pt2",
+        "ce_plus_any_miss":                             "lbn_prod20vbf_kl1_wm_CE_plus_any_miss_fold0_fold0.pt2",
+        "bkg_focus_plus_bkg_miss":                      "lbn_prod20vbf_kl1_wm_bkg_focus_plus_bkg_miss_fold0_fold0.pt2",
+        "bkg_focus_plus_bkg_miss_plus_bkg_cross_on":    "lbn_prod20vbf_kl1_wm_bkg_focus_plus_bkg_miss_plus_bkg_cross_on_fold0_fold0.pt2",
+        "all_bkg":                                      "lbn_prod20vbf_kl1_wm_all_bkg_fold0_fold0.pt2",
+        "all_bkg_plus_sig_miss":                        "lbn_prod20vbf_kl1_wm_all_bkg_plus_sig_miss_fold0_fold0.pt2",
+        "new_loss_implementation":                      "lbn_prod20vbf_kl1_diag_111_new_loss_implementation_fold0_fold0.pt2",
+        "new_implementation":                           "lbn_prod20vbf_kl1_diag_111_new_implementation_v2_fold0_fold0.pt2",
+        "test_regressed_nu":                            "lbn_prod20vbf_kl1_diag_111_test_regression_var_fold0_fold0.pt2"
+
+    }
+
+    for key, value in weight_matrix_model_dict.items():
+        add_external(key, (weight_matrix_path + value, "v1"))
 
     # run specific files
     if run == 2:
