@@ -447,7 +447,6 @@ class torch_test_dnn(_external_dnn):
 class torch_simple_kl01(_external_dnn):
     exposed = True
 
-<<<<<<< Updated upstream
 
 #
 # end-to-end model tests
@@ -497,9 +496,9 @@ class _e2e_dnn(_external_dnn):
 
 
 class e2e_model1(_e2e_dnn):
-=======
+    exposed = True
+    
 class torch_test_dnn_be(_external_dnn):
->>>>>>> Stashed changes
     exposed = True
 
 class torch_dense_0(_external_dnn):
