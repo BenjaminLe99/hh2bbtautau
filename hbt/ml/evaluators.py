@@ -228,26 +228,40 @@ class TFModel(BaseModel):
     @classmethod
     @functools.cache
     def imports(cls):
-        print("importing tensorflow ...")
+        print("importing tensorflow ...", flush=True)
         import tensorflow as tf  # type: ignore[import-not-found,import-untyped]
         tf.config.threading.set_intra_op_parallelism_threads(1)
         tf.config.threading.set_inter_op_parallelism_threads(1)
-        print("done")
+        print("done", flush=True)
         return tf
+
+    @classmethod
+    def cast_to_numpy(cls, obj: Any) -> Any:
+        tf = cls.imports()
+
+        if isinstance(obj, (list, tuple)):
+            return type(obj)(cls.cast_to_numpy(o) for o in obj)
+        if isinstance(obj, dict):
+            return type(obj)((k, cls.cast_to_numpy(v)) for k, v in obj.items())
+        if isinstance(obj, tf.Tensor):
+            return obj.numpy()
+
+        return obj
 
     def load(self) -> None:
         tf = self.imports()
 
         sig_msg = f" (signature '{self.signature_key}')" if self.signature_key else ""
-        print(f"loading {self.__class__.__name__} '{self.name}'{sig_msg} from {self.path} ...")
+        print(f"loading {self.__class__.__name__} '{self.name}'{sig_msg} from {self.path} ...", flush=True)
 
         model = tf.saved_model.load(self.path)
         self.model = model if not self.signature_key else model.signatures[self.signature_key]
 
-        print("done")
+        print("done", flush=True)
 
     def evaluate(self, *args, **kwargs) -> Any:
-        return self.model(*args, **kwargs).numpy()
+        out = self.model(*args, **kwargs)
+        return self.cast_to_numpy(out)
 
 
 class TFEvaluator(BaseEvaluator):
@@ -280,12 +294,12 @@ class TorchModel(BaseModel):
     @classmethod
     @functools.cache
     def imports(cls):
-        print("importing torch ...")
+        print("importing torch ...", flush=True)
         import numpy as np
         import torch  # type: ignore[import-not-found,import-untyped]
         torch.set_num_threads(1)
         torch.set_num_interop_threads(1)
-        print("done")
+        print("done", flush=True)
         return torch, np
 
     @classmethod
@@ -301,14 +315,27 @@ class TorchModel(BaseModel):
 
         return obj
 
+    @classmethod
+    def cast_to_numpy(cls, obj: Any) -> Any:
+        torch, _ = cls.imports()
+
+        if isinstance(obj, (list, tuple)):
+            return type(obj)(cls.cast_to_numpy(o) for o in obj)
+        if isinstance(obj, dict):
+            return type(obj)((k, cls.cast_to_numpy(v)) for k, v in obj.items())
+        if isinstance(obj, torch.Tensor):
+            return obj.numpy()
+
+        return obj
+
     def load(self) -> None:
         torch, _ = self.imports()
 
-        print(f"loading {self.__class__.__name__} '{self.name}' from {self.path} ...")
+        print(f"loading {self.__class__.__name__} '{self.name}' from {self.path} ...", flush=True)
 
         self.model = torch.export.load(self.path).module()
 
-        print("done")
+        print("done", flush=True)
 
     def evaluate(self, *args, **kwargs) -> Any:
         torch, _ = self.imports()
@@ -317,7 +344,8 @@ class TorchModel(BaseModel):
         with torch.no_grad():
             args = self.cast_from_numpy(args)
             kwargs = self.cast_from_numpy(kwargs)
-            return self.model(*args, **kwargs).numpy()
+            out = self.model(*args, **kwargs)
+            return self.cast_to_numpy(out)
 
 
 class TorchEvaluator(BaseEvaluator):

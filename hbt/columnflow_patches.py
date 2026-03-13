@@ -33,7 +33,7 @@ def patch_bundle_repo_exclude_files():
 
     # add additional files
     exclude_files.extend([
-        "docs", "tests", "data", "assets", ".law", ".setups", ".data", ".github",
+        "docs", "tests", "data", "assets", ".law/cms", ".setups", ".data", ".github",
     ])
 
     # overwrite them
@@ -68,6 +68,9 @@ def patch_htcondor_workflow_naf_resources():
         return {f"naf_{getpass.getuser()}": 1}
 
     HTCondorWorkflow.htcondor_job_resources = htcondor_job_resources
+
+    # also disable the memory summary plot by default
+    HTCondorWorkflow.show_memory_summary_hist = False
 
     logger.debug(f"patched htcondor_job_resources of {HTCondorWorkflow.task_family}")
 

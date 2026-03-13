@@ -6,17 +6,12 @@ Tasks to create correction_lib file for scale factor calculation for DY events.
 
 from __future__ import annotations
 
+import gzip
+import dataclasses
+import functools
+
 import law
 import order as od
-import awkward as ak
-import dataclasses
-import gzip
-import functools
-import numpy as np
-import correctionlib.schemav2 as cs
-
-from scipy import optimize
-from matplotlib import pyplot as plt
 
 from columnflow.types import TYPE_CHECKING, Callable
 from columnflow.hist_util import create_hist_from_variables, fill_hist
@@ -34,6 +29,9 @@ from columnflow.tasks.framework.mixins import (
     SelectorClassMixin, ReducerClassMixin,
 )
 
+np = maybe_import("numpy")
+ak = maybe_import("awkward")
+cs = maybe_import("correctionlib.schemav2")
 if TYPE_CHECKING:
     hist = maybe_import("hist")
 
@@ -78,15 +76,15 @@ class DYBaseTask(
             if cat_os.has_category(cat, deep=True)
         ]
 
-        self.dilep_pt_inst = self.config_inst.variables.n.dilep_pt
+        self.dilep_pt_inst = self.config_inst.variables.n.dilep_vis_pt
         self.nbjets_inst = self.config_inst.variables.n.nbjets_pnet_overflow
         self.njets_inst = self.config_inst.variables.n.njets
 
-        self.variables = [
-            (self.dilep_pt_inst, "dilep_pt"),
-            (self.nbjets_inst, "nbjets"),
-        ]
-        self.variables_names = [var_name for _, var_name in self.variables]
+        # self.variables = [
+        #     (self.dilep_pt_inst, "dilep_vis_pt"),
+        #     (self.nbjets_inst, "nbjets"),
+        # ]
+        # self.variables_names = [var_name for _, var_name in self.variables]
 
     @classmethod
     def modify_param_values(cls, params):
@@ -111,14 +109,15 @@ class LoadDYData(DYBaseTask):
 
         > law run hbt.LoadDYData \
             --config 22pre_v14 \
-            --version prod20_vbf
+            --version prod20_vbf \
+            --datasets bkg_data
     """
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         self.read_columns = [
-            "Jet.btagPNetB",
+            ("Jet.btagPNetB" if self.config_inst.campaign.x.year != 2024 else "Jet.btagUParTAK4B"),
             "channel_id",
             "category_ids",
             "process_id",
@@ -143,7 +142,7 @@ class LoadDYData(DYBaseTask):
             "normalized_pu_weight",
             "normalized_isr_weight",
             "normalized_fsr_weight",
-            "normalized_njet_btag_weight_pnet",
+            ("normalized_njet_btag_weight_pnet" if self.config_inst.campaign.x.year != 2024 else "btag_weight"),
             "electron_id_weight",
             "electron_reco_weight",
             "muon_id_weight",
@@ -158,7 +157,7 @@ class LoadDYData(DYBaseTask):
             "channel_id",
             "category_ids",
             "process_id",
-            "dilep_pt",
+            "dilep_vis_pt",
             "gen_dilepton_pt",
             "weight",
             "njets",
@@ -181,15 +180,22 @@ class LoadDYData(DYBaseTask):
 
         return reqs
 
+    @law.decorator.notify
     def run(self):
+        inputs = self.input()
         outputs = self.output()
 
         data_events = []
         dy_events = []
         bkg_events = []
 
+        # progress callback for scheduler
+        n_files = sum(len(inps["reduction"].collection) for inps in inputs.values())
+        progress_cb = self.create_progress_callback(n_files)
+
         # loop over datasets and load inputs
-        for dataset_name, inps in self.input().items():
+        n_files_seen = 0
+        for dataset_name, inps in inputs.items():
             self.publish_message(f"Loading dataset '{dataset_name}'")
 
             # prepare columns to write
@@ -214,12 +220,14 @@ class LoadDYData(DYBaseTask):
                     targets.append(inps["production"][prod].collection.targets[i]["columns"])
 
                 # prepare inputs for localization
+                self.publish_message(f"  processing file {i + 1}/{len(coll)}")
                 with law.localize_file_targets(targets, mode="r") as local_inps:
                     reader = ChunkedIOHandler(
                         [t.abspath for t in local_inps],
                         source_type=len(targets) * ["awkward_parquet"],
                         read_columns=len(targets) * [read_columns],
                         chunk_size=50_000,
+                        iter_message="    handling chunk {pos.index}",
                     )
                     for (events, *columns), pos in reader:
                         events = update_ak_array(events, *columns)
@@ -245,8 +253,12 @@ class LoadDYData(DYBaseTask):
                             value_type=np.int32,
                         )
 
-                        wp_value = self.config_inst.x.btag_working_points.particleNet.medium
-                        bjet_mask = events.Jet.btagPNetB >= wp_value
+                        if self.config_inst.campaign.x.year != 2024:
+                            wp_value = self.config_inst.x.btag_working_points.particleNet.medium
+                            bjet_mask = events.Jet.btagPNetB >= wp_value
+                        else:
+                            wp_value = self.config_inst.x.btag_working_points.upart.medium
+                            bjet_mask = events.Jet.btagUParTAK4B >= wp_value
                         events = set_ak_column(
                             events,
                             "nbjets",
@@ -256,7 +268,7 @@ class LoadDYData(DYBaseTask):
 
                         events = set_ak_column(
                             events,
-                            "dilep_pt",
+                            "dilep_vis_pt",
                             self.dilep_pt_inst.expression(events),
                         )
 
@@ -278,6 +290,10 @@ class LoadDYData(DYBaseTask):
                             dy_events.append(events)
                         else:
                             bkg_events.append(events)
+
+                # update progress
+                progress_cb(n_files_seen)
+                n_files_seen += 1
 
         data_events = ak.concatenate(data_events, axis=0) if data_events else None
         dy_events = ak.concatenate(dy_events, axis=0) if dy_events else None
@@ -321,7 +337,10 @@ class DYWeights(DYBaseTask):
     def requires(self):
         return LoadDYData.req(self)
 
+    @law.decorator.notify
     def run(self):
+        import scipy.optimize
+
         outputs = self.output()
 
         # read data, potentially from cache
@@ -436,7 +455,7 @@ class DYWeights(DYBaseTask):
                 upper_bounds = [1.2, 10, 50, 20, 2, 3, 100]
 
                 # perform the fit
-                popt, pcov = optimize.curve_fit(
+                popt, pcov = scipy.optimize.curve_fit(
                     self.get_fit_function,
                     bin_centers,
                     ratio_values,
@@ -600,7 +619,7 @@ class DYWeights(DYBaseTask):
         from scipy import special
 
         """
-        x: dependent variable (i.g., dilep_pt)
+        x: dependent variable (i.g., dilep_vis_pt)
         c: Gaussian offset
         n: Gaussian normalization
         mu and sigma: Gaussian parameters
@@ -631,6 +650,8 @@ class DYWeights(DYBaseTask):
         return fit_string
 
     def get_fit_plot(self, fit_njet_bin, fit_params, factor, ratio_values, ratio_err, bin_centers):
+        from matplotlib import pyplot as plt
+
         outputs = self.output()
 
         # initialize figure
@@ -705,6 +726,7 @@ class ExportDYWeights(HBTTask, ConfigTask):
     def output(self):
         return self.target("hbt_corrections.json.gz")
 
+    @law.decorator.notify
     def run(self):
         dy_weight_data = {}
 

@@ -11,8 +11,8 @@ import functools
 import law
 
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, load_correction_set
 from columnflow.columnar_util import set_ak_column
+from columnflow.util import maybe_import, load_correction_set
 
 
 ak = maybe_import("awkward")
@@ -29,7 +29,7 @@ set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
     # only run on mc
     mc_only=True,
     # function to determine the correction file
-    get_jet_file=(lambda self, external_files: external_files.trigger_sf.jet),
+    get_jet_file=(lambda self, external_files: external_files.trigger_sf.ditau_jet),
     get_jet_corrector=(lambda self: self.config_inst.x.jet_trigger_corrector),
     efficiency_name="jet_trigger_eff",
 )
@@ -41,7 +41,7 @@ def jet_trigger_efficiencies(
 ) -> ak.Array:
     """
     Producer for jet trigger efficiencies derived by the CCLUB group at object level. Requires an external file in the
-    config under ``trigger_sf.jet``.
+    config under ``trigger_sf.ditau_jet``.
 
     *get_jet_file* can be adapted in a subclass in case it is stored differently in the external files. A correction set
     named ``"jet_trigger_corrector"`` is extracted from it.
@@ -66,7 +66,9 @@ def jet_trigger_efficiencies(
             variable_map_syst = {
                 **variable_map,
                 "syst": syst,
-                "data_or_mc": kind,
+                "corrtype": kind,
+                "syst_var": "leading_jet_pt_nom",
+                # TODO: check if other variations needed, e.g. "leading_jet_pt_nomJer_Total_up"
             }
             inputs = [variable_map_syst[inp.name] for inp in self.jet_trig_corrector.inputs]
             sf = self.jet_trig_corrector(*inputs)
@@ -107,4 +109,39 @@ def jet_trigger_efficiencies_setup(
     self.jet_trig_corrector = correction_set[self.get_jet_corrector()]
 
     # check versions
-    assert self.jet_trig_corrector.version in [0, 1]
+    assert self.jet_trig_corrector.version in {0, 1, 2}
+
+
+@producer(
+    jet_name="Jet",
+    exposed=False,
+)
+def jet_multiplicity(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
+    return ak.num(events[self.jet_name], axis=-1)
+
+
+@jet_multiplicity.init
+def jet_multiplicity_init(self: Producer) -> None:
+    self.uses.add(f"{self.jet_name}.pt")
+
+
+@producer(
+    jet_name="Jet",
+    exposed=False,
+)
+def bjet_multiplicity(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
+    return ak.sum(events[self.jet_name][self.btag_column] > self.btag_wp, axis=-1)
+
+
+@bjet_multiplicity.init
+def bjet_multiplicity_init(self: Producer) -> None:
+    if self.config_inst.campaign.x.year == 2024:
+        self.btag_column = "btagUParTAK4B"
+        self.btag_wp = self.config_inst.x.btag_working_points.upart.medium
+    elif self.config_inst.campaign.x.run == 3:
+        self.btag_column = "btagPNetB"
+        self.btag_wp = self.config_inst.x.btag_working_points.particleNet.medium
+    else:
+        raise NotImplementedError(f"unsupported campaign year: {self.config_inst.campaign.x.year}")
+
+    self.uses.add(f"{self.jet_name}.{self.btag_column}")
