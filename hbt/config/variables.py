@@ -14,7 +14,7 @@ from columnflow.columnar_util import EMPTY_FLOAT, Route, attach_coffea_behavior
 from columnflow.util import maybe_import
 from columnflow.types import Sequence, Callable, Type, Any
 
-from hbt.util import create_lvector_xyz, stack_lvectors
+from hbt.util import create_lvector_xyz, stack_lvectors, rotate_px_py, delta_r12, with_type
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -163,16 +163,22 @@ def add_variables(config: od.Config) -> None:
         x_title=r"Number of b-jets (PNet medium)",
         discrete_x=True,
     )
-
     add_variable(
-        name="nbjets_pnet_no_overflow",
-        expression=config.variables.n.nbjets_pnet.expression,
-        aux={**config.variables.n.nbjets_pnet.aux, "overflow": False},
-        binning=(4, -0.5, 3.5),
-        x_title=r"Number of b-jets (PNet medium)",
+        name="nbjets_upart",
+        expression=(var_nbjets := VarNBTags()).partial(config_inst=config, attr="btagUParTAK4B"),
+        aux={"inputs": var_nbjets.uses},
+        binning=(11, -0.5, 10.5),
+        x_title=r"Number of b-jets (UParT medium)",
         discrete_x=True,
     )
-
+    add_variable(
+        name="nbjets_upart_overflow",
+        expression=config.variables.n.nbjets_upart.expression,
+        aux={**config.variables.n.nbjets_upart.aux, "overflow": True},
+        binning=(4, -0.5, 3.5),
+        x_title=r"Number of b-jets (UParT medium)",
+        discrete_x=True,
+    )
     add_variable(
         name="met_pt",
         expression="PuppiMET.pt",
@@ -475,7 +481,7 @@ def add_variables(config: od.Config) -> None:
         name="hh_vis_mass",
         expression=var_hhvis.partial(attr="mass"),
         aux={"inputs": var_hhvis.uses},
-        binning=(50, 0, 1000),
+        binning=(60, 0, 1200),
         unit="GeV",
         x_title=r"$m_{ll+bb}$ (visible)",
     )
@@ -509,7 +515,7 @@ def add_variables(config: od.Config) -> None:
         x_title=r"$\Delta R_{ll,bb}$ (visible)",
     )
 
-    # Regressed hh variables
+    # regressed hh variables
     add_variable(
         name="hh_reg_energy",
         expression=(var_hhreg := VarHHReg()).partial(attr="energy"),
@@ -522,9 +528,10 @@ def add_variables(config: od.Config) -> None:
         name="hh_reg_mass",
         expression=var_hhreg.partial(attr="mass"),
         aux={"inputs": var_hhreg.uses},
-        binning=(50, 0, 1000),
+        binning=(60, 0, 1200),
         unit="GeV",
         x_title=r"$m_{ll+bb}$ (regressed)",
+        # x_title=r"$m_{ll+bb}$ (bb x, ll x, reg y)",
     )
     add_variable(
         name="hh_reg_pt",
@@ -554,6 +561,51 @@ def add_variables(config: od.Config) -> None:
         aux={"inputs": var_hhreg.uses},
         binning=(30, 0, 6),
         x_title=r"$\Delta R_{ll,bb}$ (regressed)",
+    )
+
+    # hh kinfit variables
+    add_variable(
+        name="hh_kinfit_mass",
+        expression="h_kinfit.hh.mass",
+        binning=(60, 0, 1200),
+        unit="GeV",
+        x_title=r"$m_{ll+bb}$ (bb y, ll y, reg y)",
+    )
+    add_variable(
+        name="hh_kinfit_vis_mass",
+        expression="h_kinfit_vis.hh.mass",
+        binning=(60, 0, 1200),
+        unit="GeV",
+        x_title=r"$m_{ll+bb}$ (bb y, ll y, reg x)",
+    )
+    add_variable(
+        name="hh_kinfit_ll_mass",
+        expression="h_kinfit_ll.hh.mass",
+        binning=(60, 0, 1200),
+        unit="GeV",
+        x_title=r"$m_{ll+bb}$ (bb x, ll y, reg y)",
+    )
+    add_variable(
+        name="hh_kinfit_b_scale",
+        expression="h_kinfit.b_scale",
+        binning=(30, 0, 3),
+        x_title=r"$b$ scale",
+    )
+    add_variable(
+        name="hh_kinfit_l_scale",
+        expression="h_kinfit.l_scale",
+        binning=(30, 0, 3),
+        x_title=r"$l$ scale",
+    )
+
+    # hh generator variables
+    add_variable(
+        name="hh_gen_mass",
+        expression=(var_hhgen := VarHHGen()).partial(attr="mass"),
+        aux={"inputs": var_hhgen.uses},
+        binning=(60, 0, 1200),
+        unit="GeV",
+        x_title=r"$m_{ll+bb}$ (Gen)",
     )
 
     # single lepton variables
@@ -671,6 +723,13 @@ def add_variables(config: od.Config) -> None:
         x_title=r"Subleading muon $\phi$",
     )
 
+    # helper for logit-conversion of (e.g.) dnn outputs into a less-compressed target space
+    def logit(events: ak.Array, col: str, eps: float = 1e-6) -> ak.Array | np.ndarray:
+        # eps confines the range of the transformed values to approx. [-13.8, 13.8] for x in [0, 1]
+        import numpy as np
+        x = events[col]
+        return np.log((x + eps) / (1 - x + eps))
+
     # DNN outputs
     for proc in ["hh", "tt", "dy"]:
         # outputs of the resonant pDNN at SM-like mass and spin values
@@ -727,18 +786,23 @@ def add_variables(config: od.Config) -> None:
             aux={"x_transformations": "equal_distance_with_indices"},
         )
 
-        def logit(events, col):
-            import numpy as np
-            x = events[col]
-            eps = 1e-6  # confines the range of the transformed value to approx. [-13.8, 13.8]
-            return np.log((x + eps) / (1 - x + eps))
-
         add_variable(
             name=f"run3_dnn_moe_{proc}_logit",
             expression=functools.partial(logit, col=f"run3_dnn_moe_{proc}"),
-            binning=(100, -15, 15),
+            binning=(30, -15, 15),
             x_title=rf"logit(DNN {proc.upper()} output)",
             aux={"inputs": [f"run3_dnn_moe_{proc}"]},
+        )
+
+        add_variable(
+            name=f"run3_dnn_moe_{proc}_logit_fine",
+            expression=functools.partial(logit, col=f"run3_dnn_moe_{proc}"),
+            binning=(2000, -15, 15),
+            x_title=rf"logit(DNN {proc.upper()} output)",
+            aux={
+                "inputs": [f"run3_dnn_moe_{proc}"],
+                "x_transformations": "equal_distance_with_indices",
+            },
         )
 
         add_variable(
@@ -1122,6 +1186,26 @@ def add_variables(config: od.Config) -> None:
             aux={"x_transformations": "equal_distance_with_indices"},
         )     
 
+    # vbf dnn variables
+    for proc in ["hh_ggf", "hh_vbf", "tt", "dy"]:
+        add_variable(
+            name=f"vbf_dnn_moe_{proc}_fine",
+            expression=f"vbf_dnn_moe_{proc}",
+            binning=np.linspace(0.0, 0.8, 801).tolist() + np.linspace(0.8, 1.0, 1001)[1:].tolist(),
+            x_title=rf"VBF DNN {proc.upper()} output",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+        add_variable(
+            name=f"vbf_dnn_moe_{proc}_logit_fine",
+            expression=functools.partial(logit, col=f"vbf_dnn_moe_{proc}"),
+            binning=(2000, -15, 15),
+            x_title=rf"logit(VBF DNN {proc.upper()} output)",
+            aux={
+                "inputs": [f"vbf_dnn_moe_{proc}"],
+                "x_transformations": "equal_distance_with_indices",
+            },
+        )
+
     # end-to-end DNN outputs
     add_variable(
         name="e2e_model1_hh_fine",
@@ -1181,26 +1265,6 @@ class VarExp:
             "expression": self.partial(*args, **kwargs),
             "aux": {"inputs": self.uses},
         }
-
-
-#
-# kinematic helpers
-#
-
-def delta_r12(vectors: ak.Array) -> ak.Array:
-    # delta r between first two elements
-    dr = ak.firsts(vectors[:, :1], axis=1).delta_r(ak.firsts(vectors[:, 1:2], axis=1))
-    return ak.fill_none(dr, EMPTY_FLOAT)
-
-
-def rotate_px_py(
-    px: ak.Array | np.ndarray,
-    py: ak.Array | np.ndarray,
-    ref_phi: ak.Array | np.ndarray,
-) -> ak.Array | np.ndarray:
-    new_phi = np.arctan2(py, px) + ref_phi  # mind the "+"
-    pt = (px**2 + py**2)**0.5
-    return pt * np.cos(new_phi), pt * np.sin(new_phi)
 
 
 #
@@ -1395,9 +1459,40 @@ class VarHHReg(VarExp):
         self.raise_unknown_attr(attr)
 
 
+class VarHHGen(VarExp):
+
+    uses = {"gen_higgs.h.{pt,eta,phi,mass}"}
+
+    def __call__(self, events: ak.Array, attr: str | None = None) -> ak.Array:
+        assert ak.all(ak.num(events.gen_higgs.h, axis=-1) == 2)
+        hh = with_type("LorentzVector", events.gen_higgs.h)
+
+        if attr == "dr":
+            return delta_r12(hh)
+
+        hh = hh.sum(axis=1)
+
+        if attr is None:
+            return hh * 1
+        if attr == "mass":
+            return hh.mass
+        if attr == "pt":
+            return hh.pt
+        if attr == "eta":
+            return hh.eta
+        if attr == "abs_eta":
+            return abs(hh.eta)
+        if attr == "phi":
+            return hh.phi
+        if attr == "energy":
+            return hh.energy
+
+        self.raise_unknown_attr(attr)
+
+
 class VarNBTags(VarExp):
 
-    uses = {"Jet.{btagPNetB,btagDeepFlavB}"}
+    uses = {"Jet.{btagPNetB,btagDeepFlavB,btagUParTAK4B}"}
 
     def __call__(self, events: ak.Array, config_inst: od.Config, attr: str | None = None) -> ak.Array:
         wp = "medium"
@@ -1405,6 +1500,8 @@ class VarNBTags(VarExp):
             wp_value = config_inst.x.btag_working_points["particleNet"][wp]
         elif attr == "btagDeepFlavB":
             wp_value = config_inst.x.btag_working_points["deepjet"][wp]
+        elif attr == "btagUParTAK4B":
+            wp_value = config_inst.x.btag_working_points["upart"][wp]
         else:
             self.raise_unknown_attr(attr)
 

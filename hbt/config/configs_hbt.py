@@ -314,7 +314,6 @@ def add_config(
         ]),
         # specific lepton enriched datasets, with pythia bug fix
         *if_era(year=2024, values=[  # were not produced for 2022/23
-            "dy_tautau_m50toinf_amcatnlo",
             "dy_ee_m50toinf_amcatnlo",
             "dy_ee_m50toinf_0j_amcatnlo",
             "dy_ee_m50toinf_1j_amcatnlo",
@@ -323,6 +322,7 @@ def add_config(
             "dy_mumu_m50toinf_0j_amcatnlo",
             "dy_mumu_m50toinf_1j_amcatnlo",
             "dy_mumu_m50toinf_2j_amcatnlo",
+            "dy_tautau_m50toinf_amcatnlo",
         ]),
         "dy_tautau_m50toinf_0j_amcatnlo",
         "dy_tautau_m50toinf_1j_amcatnlo",
@@ -626,6 +626,7 @@ def add_config(
     # groups
     cfg.x.producer_groups = {
         "dnns": ["run3_dnn_moe", "reg_dnn_moe", "vbf_dnn_moe"],
+        "kinfits": ["h_kinfit", "h_kinfit_bb", "h_kinfit_ll", "h_kinfit_llvis", "h_kinfit_vis"],
     }
 
     # process groups for conveniently looping over certain processes
@@ -794,6 +795,7 @@ def add_config(
         "sm_data": sm_group + data_group,
         "sm_data_unstitched": sm_group_unstitched + data_group,
         "bkg_data": backgrounds + data_group,
+        "bkg_data_unstitched": backgrounds_unstitched + data_group,
         "bkg_data_dy": backgrounds + [
             dataset.name for dataset in cfg.datasets
             if dataset.is_data and re.match(r"^data_(e|mu)_.+$", dataset.name)
@@ -808,7 +810,13 @@ def add_config(
 
     # category groups for conveniently looping over certain categories
     # (used during plotting)
-    cfg.x.category_groups = {}
+    cfg.x.category_groups = {
+        "dy_sf": [r"{ee,mumu}__dyc__ge2j__ge0b__os"],
+        # standard cclub categories
+        "cc": [r"{e,mu,tau}tau__{res1b,res2b,vbf,boosted}_cc__os__iso"],
+        # cclub categories with vbf category removed and events included in res categories
+        "cc_novbf": [r"{e,mu,tau}tau__{res1b_inclvbf,res2b_inclvbf,boosted}_cc__os__iso"],
+    }
 
     # variable groups for conveniently looping over certain variables
     # (used during plotting)
@@ -822,6 +830,7 @@ def add_config(
             "e1_pt", "e1_eta", "e1_phi", "e2_pt", "e2_eta", "e2_phi",
             "tau1_pt", "tau1_eta", "tau1_phi", "tau2_pt", "tau2_eta", "tau2_phi",
         ],
+        "dy_sf": ["dilep_vis_pt", "njets", "nbjets_upart_overflow" if year == 2024 else "nbjets_pnet_overflow"],
     }
 
     # shift groups for conveniently looping over certain shifts
@@ -1319,6 +1328,14 @@ def add_config(
                 "lp": {"2016APV": 0.9088, "2016": 0.9137, "2017": 0.9105, "2018": 0.9172}[btag_key],
             },
         })
+
+        # btag columns and working point values for easy use throughout the code
+        cfg.x.btag_deepjet = DotDict(
+            jet_column="btagDeepFlavB",
+            wp=cfg.x.btag_working_points.deepjet.medium,
+            weight_column="normalized_njet_btag_weight_deepjet",
+        )
+        cfg.x.btag_default = cfg.x.btag_default
     elif run == 3:
         # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22
         # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22EE
@@ -1357,6 +1374,24 @@ def add_config(
                 "lp": {"2022": 0.9088, "2022EE": 0.9137, "2023": 0.9105, "2023BPix": 0.9172, "2024": 0.9172}[btag_key],
             },
         })
+
+        # btag columns and working point values for easy use throughout the code
+        cfg.x.btag_deepjet = DotDict(
+            jet_column="btagDeepFlavB",
+            wp=cfg.x.btag_working_points.deepjet.medium,
+            weight_column="normalized_njet_btag_weight_deepjet",
+        )
+        cfg.x.btag_pnet = DotDict(
+            jet_column="btagPNetB",
+            wp=cfg.x.btag_working_points.particleNet.medium,
+            weight_column="normalized_njet_btag_weight_pnet",
+        )
+        cfg.x.btag_upart = DotDict(
+            jet_column="btagUParTAK4B",
+            wp=cfg.x.btag_working_points.upart.medium,
+            weight_column="btag_weight",  # no need for normalization in wp based method
+        )
+        cfg.x.btag_default = cfg.x.btag_upart if year == 2024 else cfg.x.btag_pnet
     else:
         assert False
 
@@ -1406,20 +1441,20 @@ def add_config(
     cfg.x.btag_sf_deepjet = BTagSFConfig(
         correction_set="deepJet_shape",
         jec_sources=cfg.x.btag_sf_jec_sources,
-        discriminator="btagDeepFlavB",
+        discriminator=cfg.x.btag_deepjet.jet_column,
     )
     if run == 3:
-        cfg.x.btag_sf_pnet = BTagSFConfig(
-            correction_set="particleNet_shape",
-            jec_sources=cfg.x.btag_sf_jec_sources,
-            discriminator="btagPNetB",
-        )
-
-        if year == 2024:
+        if year != 2024:
+            cfg.x.btag_sf_pnet = BTagSFConfig(
+                correction_set="particleNet_shape",
+                jec_sources=cfg.x.btag_sf_jec_sources,
+                discriminator=cfg.x.btag_default.jet_column,
+            )
+        else:
             from columnflow.selection.cms.btag import BTagWPCountConfig
             cfg.x.btag_wp_count_config = BTagWPCountConfig(
                 jet_name="Jet",
-                btag_column="btagUParTAK4B",
+                btag_column=cfg.x.btag_default.jet_column,
                 btag_wps=cfg.x.btag_working_points.upart.copy(),
                 pt_edges=(0, 20, 30, 50, 70, 100, 140, 200, 300, 600, 10_000),
                 abs_eta_edges=(0.0, 1.0, 1.5, 2.0, 5.0),
@@ -1441,7 +1476,7 @@ def add_config(
 
             cfg.x.btag_wp_sf_config = BTagWPSFConfig(
                 jet_name="Jet",
-                btag_column="btagUParTAK4B",
+                btag_column=cfg.x.btag_default.jet_column,
                 correction_set="UParTAK4_merged",
                 btag_wps={
                     name: value for name, value in cfg.x.btag_working_points.upart.items()
@@ -1492,20 +1527,11 @@ def add_config(
         dy_era = f"{year}"
         if year == 2022:
             dy_era += "preEE" if campaign.has_tag("preEE") else "postEE"
-        elif year == 2023:
+        if year == 2023:
             dy_era += "preBPix" if campaign.has_tag("preBPix") else "postBPix"
-        elif year == 2024:
-            dy_era = "2023preBPix"  # TODO: 2024: use proper 2024 once available
-        else:
-            assert False
 
         # dy reweighting with custom weights
-        # https://cms-higgs-leprare.docs.cern.ch/htt-common/DY_reweight
-        dy_btag_col, dy_btag_threshold = (
-            ("btagPNetB", cfg.x.btag_working_points.particleNet.medium)
-            if year != 2024
-            else ("btagUParTAK4B", cfg.x.btag_working_points.upart.medium)
-        )
+        # (originally by hleprare group, https://cms-higgs-leprare.docs.cern.ch/htt-common/DY_reweight)
         cfg.x.dy_weight_config = DrellYanConfig(
             era=dy_era,
             correction="dy_weight",
@@ -1519,8 +1545,8 @@ def add_config(
                 "syst_linear_up", "syst_linear_down",
             ],
             get_njets=(lambda prod, events: sys.modules["awkward"].num(events.Jet, axis=1)),
-            get_nbtags=(lambda prod, events: sys.modules["awkward"].sum(events.Jet[dy_btag_col] > dy_btag_threshold, axis=1)),  # noqa: E501
-            used_columns={f"Jet.{dy_btag_col}"},
+            get_nbtags=(lambda prod, events: sys.modules["awkward"].sum(events.Jet[cfg.x.btag_default.jet_column] > cfg.x.btag_default.wp, axis=1)),  # noqa: E501
+            used_columns={f"Jet.{cfg.x.btag_default.jet_column}"},
         )
 
         # dy boson recoil correction
@@ -1833,7 +1859,7 @@ def add_config(
                 vnano=15,
                 era="24CDEReprocessingFGHIPrompt-Summer24",
                 pog_directories={"dc": "Collisions24"},
-                snapshot=CATSnapshot(btv="2026-01-30", dc="2026-02-25", egm="2025-12-15", jme="2025-12-02", lum="2025-12-02", muo="2025-11-27", tau="2026-01-14"),  # noqa: E501
+                snapshot=CATSnapshot(btv="2026-03-10", dc="2026-02-25", egm="2025-12-15", jme="2025-12-02", lum="2025-12-02", muo="2025-11-27", tau="2026-01-14"),  # noqa: E501
             ),
         }[(year, campaign.x.postfix, vnano)]
     else:
@@ -1877,7 +1903,7 @@ def add_config(
     add_external("jet_veto_map", (cat_info.get_file("jme", "jetvetomaps.json.gz"), "v1"))
     # btag scale factor
     if run == 3 and year == 2024:
-        add_external("btag_wp_sf_corr", (f"{central_hbt_dir}/custom_btv_files/btag_merged_2024.json.gz", "v1"))
+        add_external("btag_wp_sf_corr", (f"{central_hbt_dir}/custom_btv_files/btag_merged_2024_2026-03-10.json.gz", "v1"))  # noqa: E501
     else:
         # tmp fix for 23post, see https://trello.com/c/DbgRNT7o/24-change-23post-btagsfcorr-back-to-cat-deployed-file
         if (year, campaign.x.postfix) == (2023, "BPix"):
@@ -1893,7 +1919,7 @@ def add_config(
     # dnn models trained with run 2 legacy setup but run 3 data
     for fold in range(5):
         # for 2024, use version with btag for now, but we could also drop it since we have no full shape correction
-        basename = f"model_2024_fold{fold}_btag_moe.tgz" if year == 2024 else f"model_fold{fold}_moe.tgz"
+        basename = f"model_2024_v2_fold{fold}_btag_moe.tgz" if year == 2024 else f"model_fold{fold}_moe.tgz"
         add_external(f"run3_dnn_fold{fold}_moe", (f"{central_hbt_dir}/run3_models/run3_dnn/{basename}", "v1"))
     # simple version of same model for quick comparisons
     add_external("run3_dnn_simple", (f"{central_hbt_dir}/run3_models/run3_dnn_simple_fixedweights_kl01/model_fold0_seed1.tgz", "v1"))  # noqa: E501
@@ -2131,7 +2157,7 @@ def add_config(
         ))
         # dy weight and recoil corrections
         # https://cms-higgs-leprare.docs.cern.ch/htt-common/V_recoil
-        add_external("dy_weight_sf", (f"{central_hbt_dir}/custom_dy_files/hbt_corrections.json.gz", "v3"))
+        add_external("dy_weight_sf", (f"{central_hbt_dir}/custom_dy_files/hbt_corrections_v3.json.gz", "v4"))
         add_external("dy_recoil_sf", (f"{central_hbt_dir}/central_dy_files/Recoil_corrections_v5.json.gz", "v1"))
         # tau and trigger specific files are not consistent across 2022/2023 and 2024 yet
         trigger_sf_internal_subpath = f"AnalysisCore-{cclub_branch}/data/TriggerScaleFactors"
@@ -2302,10 +2328,6 @@ def add_config(
     # mapped to shift instances they depend on
     # (this info is used by weight producers)
     get_shifts = functools.partial(get_shifts_from_sources, cfg)
-    btag_weight_column = "normalized_njet_btag_weight_pnet"
-    if year == 2024:
-        btag_weight_column = "btag_weight"
-
     cfg.x.event_weights = DotDict({
         "normalization_weight": [],
         "normalization_weight_inclusive": [],
@@ -2314,7 +2336,7 @@ def add_config(
         "normalized_pu_weight": get_shifts("minbias_xs"),
         "normalized_isr_weight": get_shifts("isr"),
         "normalized_fsr_weight": get_shifts("fsr"),
-        btag_weight_column: get_shifts(*(f"btag_{unc}" for unc in cfg.x.btag_unc_names)),
+        cfg.x.btag_default.weight_column: get_shifts(*(f"btag_{unc}" for unc in cfg.x.btag_unc_names)),
         "electron_id_weight": get_shifts("e_id"),
         "electron_reco_weight": get_shifts("e_reco"),
         "muon_id_weight": get_shifts("mu_id"),
