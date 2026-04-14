@@ -916,3 +916,133 @@ test_regressed_nu_no_shifts = default_no_shifts.derive(
     "test_regressed_nu_no_shifts",
     cls_dict={"variable": "test_regressed_nu_hh_fine"},
 )
+
+bg_bgmiss_bgcross_with_nu_no_shifts = default_no_shifts.derive(
+    "bg_bgmiss_bgcross_with_nu_no_shifts",
+    cls_dict={"variable": "bg_bgmiss_bgcross_with_nu_hh_fine"},
+)
+
+bg_bgmiss_bgcross_nosig_with_nu_no_shifts = default_no_shifts.derive(
+    "bg_bgmiss_bgcross_nosig_with_nu_no_shifts",
+    cls_dict={"variable": "bg_bgmiss_bgcross_nosig_with_nu_hh_fine"},
+)
+
+bg_bgmiss_bgcross_with_nu_kl1_no_shifts = default_no_shifts.derive(
+    "bg_bgmiss_bgcross_with_nu_kl1_no_shifts",
+    cls_dict={"variable": "bg_bgmiss_bgcross_with_nu_kl1_hh_fine"},
+)
+
+bg_bgmiss_bgcross_with_nu_kl2p45_no_shifts = default_no_shifts.derive(
+    "bg_bgmiss_bgcross_with_nu_kl2p45_no_shifts",
+    cls_dict={"variable": "bg_bgmiss_bgcross_with_nu_kl2p45_hh_fine"},
+)
+
+bg_bgmiss_bgcross_with_nu_kl5_no_shifts = default_no_shifts.derive(
+    "bg_bgmiss_bgcross_with_nu_kl5_no_shifts",
+    cls_dict={"variable": "bg_bgmiss_bgcross_with_nu_kl5_hh_fine"},
+)
+
+bg_bgmiss_bgcross_with_nu_kl0_no_shifts = default_no_shifts.derive(
+    "bg_bgmiss_bgcross_with_nu_kl0_no_shifts",
+    cls_dict={"variable": "bg_bgmiss_bgcross_with_nu_kl0_hh_fine"},
+)
+
+bg_bgmiss_bgcross_with_nu_kl0_lr_adjust_no_shifts = default_no_shifts.derive(
+    "bg_bgmiss_bgcross_with_nu_kl0_lr_adjust_no_shifts",
+    cls_dict={"variable": "bg_bgmiss_bgcross_with_nu_kl0_lr_adjust_hh_fine"},
+)
+
+ce_with_nu_kl1_no_shifts = default_no_shifts.derive(
+    "ce_with_nu_kl1_no_shifts",
+    cls_dict={"variable": "ce_with_nu_kl1_hh_fine"},
+)
+
+ce_with_nu_kl1_v2_no_shifts = default_no_shifts.derive(
+    "ce_with_nu_kl1_v2_no_shifts",
+    cls_dict={"variable": "ce_with_nu_kl1_v2_hh_fine"},
+)
+
+ce_with_nu_kl1_v3_no_shifts = default_no_shifts.derive(
+    "ce_with_nu_kl1_v3_no_shifts",
+    cls_dict={"variable": "ce_with_nu_kl1_v3_hh_fine"},
+)
+
+ce_with_nu_kl1_v4_no_shifts = default_no_shifts.derive(
+    "ce_with_nu_kl1_v4_no_shifts",
+    cls_dict={"variable": "ce_with_nu_kl1_v4_hh_fine"},
+)
+
+ce_with_nu_kl2p45_no_shifts = default_no_shifts.derive(
+    "ce_with_nu_kl2p45_no_shifts",
+    cls_dict={"variable": "ce_with_nu_kl2p45_hh_fine"},
+)
+
+ce_with_nu_kl5_no_shifts = default_no_shifts.derive(
+    "ce_with_nu_kl5_no_shifts",
+    cls_dict={"variable": "ce_with_nu_kl5_hh_fine"},
+)
+
+ce_with_nu_kl0_no_shifts = default_no_shifts.derive(
+    "ce_with_nu_kl0_no_shifts",
+    cls_dict={"variable": "ce_with_nu_kl0_hh_fine"},
+)
+
+ce_diag1111_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "ce_diag1111_kl0_kl1_no_shifts",
+    cls_dict={"variable": "ce_diag1111_kl0_kl1_hh_fine"},
+)
+
+ce_diag1111_kl0_kl1_uneven_importance_no_shifts = default_no_shifts.derive(
+    "ce_diag1111_kl0_kl1_uneven_importance_no_shifts",
+    cls_dict={"variable": "ce_diag1111_kl0_kl1_uneven_importance_hh_fine"},
+)
+
+wm_all1s_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "wm_all1s_kl0_kl1_no_shifts",
+    cls_dict={"variable": "wm_all1s_kl0_kl1_hh_fine"},
+)
+
+wm_diag11p5p5_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "wm_diag11p5p5_kl0_kl1_no_shifts",
+    cls_dict={"variable": "wm_diag11p5p5_kl0_kl1_hh_fine"},
+)
+
+wm_diag11p5p5_kl0_kl1_uneven_importance_no_shifts = default_no_shifts.derive(
+    "wm_diag11p5p5_kl0_kl1_uneven_importance_no_shifts",
+    cls_dict={"variable": "wm_diag11p5p5_kl0_kl1_uneven_importance_hh_fine"},
+)
+
+ce_diag1111_kl0_kl1_fixed_v2_no_shifts = default_no_shifts.derive(
+    "ce_diag1111_kl0_kl1_fixed_v2_no_shifts",
+    cls_dict={"variable": "ce_diag1111_kl0_kl1_fixed_v2_hh_fine"},
+)
+
+ce_diag111_kl1_fixed_v1_no_shifts = default_no_shifts.derive(
+    "ce_diag111_kl1_fixed_v1_no_shifts",
+    cls_dict={"variable": "ce_diag111_kl1_fixed_v1_hh_fine"},
+)
+
+ce_diag1111_kl0_kl1_uneven_no_shifts = default_no_shifts.derive(
+    "ce_diag1111_kl0_kl1_uneven_no_shifts",
+    cls_dict={"variable": "ce_diag1111_kl0_kl1_uneven_hh_fine"},
+)
+
+diag1155_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "diag1155_kl0_kl1_no_shifts",
+    cls_dict={"variable": "diag1155_kl0_kl1_hh_fine"},
+)
+
+diag11p5p5_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "diag11p5p5_kl0_kl1_no_shifts",
+    cls_dict={"variable": "diag11p5p5_kl0_kl1_hh_fine"},
+)
+
+diag111_diag11_kl0_kl1_test_no_shifts = default_no_shifts.derive(
+    "diag111_diag11_kl0_kl1_test_no_shifts",
+    cls_dict={"variable": "diag111_diag11_kl0_kl1_test_hh_fine"},
+)
+
+diag111_diag11_kl0_kl1_test_2_no_shifts = default_no_shifts.derive(
+    "diag111_diag11_kl0_kl1_test_2_no_shifts",
+    cls_dict={"variable": "diag111_diag11_kl0_kl1_test_2_hh_fine"},
+)

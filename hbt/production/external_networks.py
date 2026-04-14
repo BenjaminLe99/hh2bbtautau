@@ -30,6 +30,7 @@ logger = law.logger.get_logger(__name__)
 
 # helper functions
 set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
+set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
 
 BTagType = Literal["pnet", "upart", "none"]
 
@@ -122,13 +123,15 @@ class _external_dnn(Producer):
         self.produces |= set(self.output_columns)
 
     def requires_func(self, task: law.Task, reqs: dict, **kwargs) -> None:
-        if "external_files" in reqs:
-            return
-
-        from columnflow.tasks.external import BundleExternalFiles
-        reqs["external_files"] = BundleExternalFiles.req(task)
+        super().requires_func(task, reqs, **kwargs)
+        
+        if "external_files" not in reqs:
+            from columnflow.tasks.external import BundleExternalFiles
+            reqs["external_files"] = BundleExternalFiles.req(task)
 
     def setup_func(self, task: law.Task, reqs: dict[str, DotDict[str, Any]], **kwargs) -> None:
+        super().setup_func(task, reqs, **kwargs)
+
         from hbt.ml.evaluators import TorchEvaluator
 
         if not getattr(task, "taf_torch_evaluator", None):
@@ -234,60 +237,74 @@ class _external_dnn(Producer):
         has_jet_pair, has_fatjet = has_jet_pair[event_mask], has_fatjet[event_mask]
 
         # prepare network inputs
-        f = DotDict()
+        cont = DotDict()
+        cat = DotDict()
+        
+        """
+        - update feature update hook to accept and return two dicts
+        """
 
         # compute angle from visible mother particle of vis_tau1 and vis_tau2
         # used to rotate the kinematics of dau{1,2}, met, bjet{1,2} and fatjets relative to it
         phi_lep = np.arctan2(vis_tau1.py + vis_tau2.py, vis_tau1.px + vis_tau2.px, dtype=np.float64)
 
+        # MET variables
+        _met = _events[self.config_inst.x.met_name]
+        cont.met_px, cont.met_py = rotate_to_phi(
+            phi_lep,
+            _met.pt * np.cos(_met.phi),
+            _met.pt * np.sin(_met.phi),
+        )
+        cont.met_cov00, cont.met_cov01, cont.met_cov11 = _met.covXX, _met.covXY, _met.covYY
+
         # lepton 1
-        f.vis_tau1_px, f.vis_tau1_py = rotate_to_phi(phi_lep, vis_tau1.px, vis_tau1.py)
-        f.vis_tau1_pz, f.vis_tau1_e = vis_tau1.pz, vis_tau1.energy
+        cont.vis_tau1_px, cont.vis_tau1_py = rotate_to_phi(phi_lep, vis_tau1.px, vis_tau1.py)
+        cont.vis_tau1_pz, cont.vis_tau1_e = vis_tau1.pz, vis_tau1.energy
 
         # lepton 2
-        f.vis_tau2_px, f.vis_tau2_py = rotate_to_phi(phi_lep, vis_tau2.px, vis_tau2.py)
-        f.vis_tau2_pz, f.vis_tau2_e = vis_tau2.pz, vis_tau2.energy
+        cont.vis_tau2_px, cont.vis_tau2_py = rotate_to_phi(phi_lep, vis_tau2.px, vis_tau2.py)
+        cont.vis_tau2_pz, cont.vis_tau2_e = vis_tau2.pz, vis_tau2.energy
 
         # there might be less than two jets or no fatjet, so pad them
         bjets = ak.pad_none(_events.HHBJet, 2, axis=1)
         fatjet = ak.pad_none(_events.FatJet, 1, axis=1)[:, 0]
 
         # bjet 1
-        f.bjet1_px, f.bjet1_py = rotate_to_phi(phi_lep, bjets[:, 0].px, bjets[:, 0].py)
-        f.bjet1_pz, f.bjet1_e = bjets[:, 0].pz, bjets[:, 0].energy
+        cont.bjet1_px, cont.bjet1_py = rotate_to_phi(phi_lep, bjets[:, 0].px, bjets[:, 0].py)
+        cont.bjet1_pz, cont.bjet1_e = bjets[:, 0].pz, bjets[:, 0].energy
         if self.btag_type == "pnet":
-            f.bjet1_tag_b = bjets[:, 0].btagPNetB
-            f.bjet1_tag_cvsb = bjets[:, 0].btagPNetCvB
-            f.bjet1_tag_cvsl = bjets[:, 0].btagPNetCvL
+            cont.bjet1_tag_b = bjets[:, 0].btagPNetB
+            cont.bjet1_tag_cvsb = bjets[:, 0].btagPNetCvB
+            cont.bjet1_tag_cvsl = bjets[:, 0].btagPNetCvL
         elif self.btag_type == "upart":
-            f.bjet1_tag_b = bjets[:, 0].btagUParTAK4B
-        f.bjet1_hhbtag = bjets[:, 0].hhbtag
+            cont.bjet1_tag_b = bjets[:, 0].btagUParTAK4B
+        cont.bjet1_hhbtag = bjets[:, 0].hhbtag
 
         # bjet 2
-        f.bjet2_px, f.bjet2_py = rotate_to_phi(phi_lep, bjets[:, 1].px, bjets[:, 1].py)
-        f.bjet2_pz, f.bjet2_e = bjets[:, 1].pz, bjets[:, 1].energy
+        cont.bjet2_px, cont.bjet2_py = rotate_to_phi(phi_lep, bjets[:, 1].px, bjets[:, 1].py)
+        cont.bjet2_pz, cont.bjet2_e = bjets[:, 1].pz, bjets[:, 1].energy
         if self.btag_type == "pnet":
-            f.bjet2_tag_b = bjets[:, 1].btagPNetB
-            f.bjet2_tag_cvsb = bjets[:, 1].btagPNetCvB
-            f.bjet2_tag_cvsl = bjets[:, 1].btagPNetCvL
+            cont.bjet2_tag_b = bjets[:, 1].btagPNetB
+            cont.bjet2_tag_cvsb = bjets[:, 1].btagPNetCvB
+            cont.bjet2_tag_cvsl = bjets[:, 1].btagPNetCvL
         elif self.btag_type == "upart":
-            f.bjet2_tag_b = bjets[:, 1].btagUParTAK4B
-        f.bjet2_hhbtag = bjets[:, 1].hhbtag
+            cont.bjet2_tag_b = bjets[:, 1].btagUParTAK4B
+        cont.bjet2_hhbtag = bjets[:, 1].hhbtag
 
         # fatjet variables
-        f.fatjet_px, f.fatjet_py = rotate_to_phi(phi_lep, fatjet.px, fatjet.py)
-        f.fatjet_pz, f.fatjet_e = fatjet.pz, fatjet.energy
+        cont.fatjet_px, cont.fatjet_py = rotate_to_phi(phi_lep, fatjet.px, fatjet.py)
+        cont.fatjet_pz, cont.fatjet_e = fatjet.pz, fatjet.energy
 
         # mask values as done during training of the network
         def mask_values(mask, value, *fields):
             if not ak.any(mask):
                 return
             for field in fields:
-                if field not in f:
+                if field not in cont:
                     continue
-                arr = flat_np_view(ak.fill_none(f[field], value, axis=0), copy=True)
+                arr = flat_np_view(ak.fill_none(cont[field], value, axis=0), copy=True)
                 arr[flat_np_view(mask)] = value
-                f[field] = layout_ak_array(arr, f[field]) if f[field].ndim > 1 else arr
+                cont[field] = layout_ak_array(arr, cont[field]) if cont[field].ndim > 1 else arr
 
         mask_values(~has_jet_pair, 0.0, "bjet1_px", "bjet1_py", "bjet1_pz", "bjet1_e")
         mask_values(~has_jet_pair, 0.0, "bjet2_px", "bjet2_py", "bjet2_pz", "bjet2_e")
@@ -296,84 +313,59 @@ class _external_dnn(Producer):
         mask_values(~has_fatjet, 0.0, "fatjet_px", "fatjet_py", "fatjet_pz", "fatjet_e")
 
         # combine daus
-        f.htt_e = f.vis_tau1_e + f.vis_tau2_e
-        f.htt_px = f.vis_tau1_px + f.vis_tau2_px
-        f.htt_py = f.vis_tau1_py + f.vis_tau2_py
-        f.htt_pz = f.vis_tau1_pz + f.vis_tau2_pz
+        cont.htt_e = cont.vis_tau1_e + cont.vis_tau2_e
+        cont.htt_px = cont.vis_tau1_px + cont.vis_tau2_px
+        cont.htt_py = cont.vis_tau1_py + cont.vis_tau2_py
+        cont.htt_pz = cont.vis_tau1_pz + cont.vis_tau2_pz
 
         # combine bjets
-        f.hbb_e = f.bjet1_e + f.bjet2_e
-        f.hbb_px = f.bjet1_px + f.bjet2_px
-        f.hbb_py = f.bjet1_py + f.bjet2_py
-        f.hbb_pz = f.bjet1_pz + f.bjet2_pz
+        cont.hbb_e = cont.bjet1_e + cont.bjet2_e
+        cont.hbb_px = cont.bjet1_px + cont.bjet2_px
+        cont.hbb_py = cont.bjet1_py + cont.bjet2_py
+        cont.hbb_pz = cont.bjet1_pz + cont.bjet2_pz
         mask_values(~has_jet_pair, 0.0, "hbb_e", "hbb_px", "hbb_py", "hbb_pz")
 
         # htt + hbb
-        f.htthbb_e = f.htt_e + f.hbb_e
-        f.htthbb_px = f.htt_px + f.hbb_px
-        f.htthbb_py = f.htt_py + f.hbb_py
-        f.htthbb_pz = f.htt_pz + f.hbb_pz
+        cont.htthbb_e = cont.htt_e + cont.hbb_e
+        cont.htthbb_px = cont.htt_px + cont.hbb_px
+        cont.htthbb_py = cont.htt_py + cont.hbb_py
+        cont.htthbb_pz = cont.htt_pz + cont.hbb_pz
         mask_values(~has_jet_pair, 0.0, "htthbb_e", "htthbb_px", "htthbb_py", "htthbb_pz")
 
         # htt + fatjet
-        f.httfatjet_e = f.htt_e + f.fatjet_e
-        f.httfatjet_px = f.htt_px + f.fatjet_px
-        f.httfatjet_py = f.htt_py + f.fatjet_py
-        f.httfatjet_pz = f.htt_pz + f.fatjet_pz
+        cont.httfatjet_e = cont.htt_e + cont.fatjet_e
+        cont.httfatjet_px = cont.htt_px + cont.fatjet_px
+        cont.httfatjet_py = cont.htt_py + cont.fatjet_py
+        cont.httfatjet_pz = cont.htt_pz + cont.fatjet_pz
         mask_values(~has_fatjet, 0.0, "httfatjet_e", "httfatjet_px", "httfatjet_py", "httfatjet_pz")
 
-        # MET variables
-        _met = _events[self.config_inst.x.met_name]
-        f.met_px, f.met_py = rotate_to_phi(
-            phi_lep,
-            _met.pt * np.cos(_met.phi),
-            _met.pt * np.sin(_met.phi),
-        )
-        f.met_cov00, f.met_cov01, f.met_cov11 = _met.covXX, _met.covXY, _met.covYY
-
         # assign categorical inputs via names too
-        f.pair_type = pair_type
-        f.dm1 = dm1
-        f.dm2 = dm2
-        f.vis_tau1_charge = vis_tau1.charge
-        f.vis_tau2_charge = vis_tau2.charge
-        f.has_jet_pair = has_jet_pair
-        f.has_fatjet = has_fatjet
+        cat.pair_type = pair_type
+        cat.dm1 = dm1
+        cat.dm2 = dm2
+        cat.vis_tau1_charge = vis_tau1.charge
+        cat.vis_tau2_charge = vis_tau2.charge
+        cat.has_jet_pair = has_jet_pair
+        cat.has_fatjet = has_fatjet
+
+        # optionally update features
+        cont, cat = self.update_features(cont, cat, events[event_mask], phi_lep)
 
         # build continuous inputs
         # (order exactly as documented in link above)
         continuous_inputs = [
-            np.asarray(t[..., None], dtype=np.float32) for t in [
-                f.met_px, f.met_py, f.met_cov00, f.met_cov01, f.met_cov11,
-                f.vis_tau1_px, f.vis_tau1_py, f.vis_tau1_pz, f.vis_tau1_e,
-                f.vis_tau2_px, f.vis_tau2_py, f.vis_tau2_pz, f.vis_tau2_e,
-                f.bjet1_px, f.bjet1_py, f.bjet1_pz, f.bjet1_e, 
-                f.bjet1_tag_b, f.bjet1_tag_cvsb, f.bjet1_tag_cvsl,
-                f.bjet1_hhbtag,
-                f.bjet2_px, f.bjet2_py, f.bjet2_pz, f.bjet2_e,
-                f.bjet2_tag_b, f.bjet2_tag_cvsb, f.bjet2_tag_cvsl,
-                f.bjet2_hhbtag,
-                f.fatjet_px, f.fatjet_py, f.fatjet_pz, f.fatjet_e,
-                f.htt_e, f.htt_px, f.htt_py, f.htt_pz,
-                f.hbb_e, f.hbb_px, f.hbb_py, f.hbb_pz,
-                f.htthbb_e, f.htthbb_px, f.htthbb_py, f.htthbb_pz,
-                f.httfatjet_e, f.httfatjet_px, f.httfatjet_py, f.httfatjet_pz,
-            ]
+            np.asarray(t[..., None], dtype=np.float32)
+            for t in cont.values()
             if t is not None
         ]
 
         # build categorical inputs
         # (order exactly as documented in link above)
         categorical_inputs = [
-            np.asarray(t[..., None], dtype=np.int32) for t in [
-                f.pair_type,
-                f.dm1, f.dm2,
-                f.vis_tau1_charge, f.vis_tau2_charge,
-                f.has_jet_pair, f.has_fatjet,
-            ] if t is not None
+            np.asarray(t[..., None], dtype=np.int32)
+            for t in cat.values()
+            if t is not None
         ]
-
-        #from IPython import embed;embed(header=" string - 359 in /afs/desy.de/user/l/lebenjam/Master/hh2bbtautau/hbt/production/external_networks.py")
         # evaluate the model
         scores = self.evaluator(
             self.cls_name,
@@ -389,31 +381,19 @@ class _external_dnn(Producer):
 
         if self.produce_features:
             # store input columns for sync
-            cont_inputs_cols = [
-                "met_px", "met_py", "met_cov00", "met_cov01", "met_cov11",
-                "vis_tau1_px", "vis_tau1_py", "vis_tau1_pz", "vis_tau1_e",
-                "vis_tau2_px", "vis_tau2_py", "vis_tau2_pz", "vis_tau2_e",
-                "bjet1_px", "bjet1_py", "bjet1_pz", "bjet1_e", "bjet1_tag_b", "bjet1_tag_cvsb", "bjet1_tag_cvsl",
-                "bjet1_hhbtag",
-                "bjet2_px", "bjet2_py", "bjet2_pz", "bjet2_e", "bjet2_tag_b", "bjet2_tag_cvsb", "bjet2_tag_cvsl",
-                "bjet2_hhbtag",
-                "fatjet_px", "fatjet_py", "fatjet_pz", "fatjet_e",
-                "htt_e", "htt_px", "htt_py", "htt_pz",
-                "hbb_e", "hbb_px", "hbb_py", "hbb_pz",
-                "htthbb_e", "htthbb_px", "htthbb_py", "htthbb_pz",
-                "httfatjet_e", "httfatjet_px", "httfatjet_py", "httfatjet_pz",
-                "nu1_px","nu1_py","nu1_pz",
-                "nu2_px","nu2_py","nu2_pz",
-            ]
-            cat_inputs_cols = [
-                "pair_type", "dm1", "dm2", "vis_tau1_charge", "vis_tau2_charge", "has_jet_pair", "has_fatjet",
-            ]
-            for c in cont_inputs_cols + cat_inputs_cols:
+            for name, vals in cont.items():
                 values = self.empty_value * np.ones(len(events), dtype=np.float32)
-                values[event_mask] = ak.flatten(np.asarray(f[c][..., None], dtype=np.float32))
-                events = set_ak_column_f32(events, f"{self.features_prefix}{self.cls_name}_{c}", values)
+                values[event_mask] = ak.flatten(np.asarray(vals[..., None], dtype=np.float32))
+                events = set_ak_column_f32(events, f"{self.features_prefix}{self.cls_name}_{name}", values)
+            for name, vals in cat.items():
+                values = int(self.empty_value) * np.ones(len(events), dtype=np.int32)
+                values[event_mask] = ak.flatten(np.asarray(vals[..., None], dtype=np.int32))
+                events = set_ak_column_i32(events, f"{self.features_prefix}{self.cls_name}_{name}", values)
 
         return events
+
+    def update_features(self, cont, cat, events, phi_lep):
+        return cont, cat
 
     def sanitize_scores(self, scores: Any) -> Any:
         # in very rare cases (1 in 25k), the network output can be none, likely for numerical reasons,
@@ -497,7 +477,7 @@ class _e2e_dnn(_external_dnn):
 
 class e2e_model1(_e2e_dnn):
     exposed = True
-    
+
 class torch_test_dnn_be(_external_dnn):
     exposed = True
 
@@ -702,5 +682,97 @@ class new_loss_implementation(_external_dnn):
 class new_implementation(_external_dnn):
     exposed = True
 
-class test_regressed_nu(_external_dnn):
+class has_neutrinos(_external_dnn):
+    uses = _external_dnn.uses | {"reg_dnn_moe_nu*"}
+    require_producers = ["reg_dnn_moe"]    
+
+    def update_features(self, cont, cat, events, phi_lep):
+        cont, cat = super().update_features(cont, cat, events, phi_lep)
+        # add regressed neutrinos
+        for num in ('1','2'):
+            for comp in ('px','py','pz'):
+                cont[f'nu{num}_{comp}'] = events[f'reg_dnn_moe_nu{num}_{comp}']
+        return cont, cat
+
+class test_regressed_nu(has_neutrinos):
     exposed = True
+
+class bg_bgmiss_bgcross_with_nu(has_neutrinos):
+    exposed = True
+
+class bg_bgmiss_bgcross_nosig_with_nu(has_neutrinos):
+    exposed = True
+
+class bg_bgmiss_bgcross_with_nu_kl1(has_neutrinos):
+    exposed = True
+
+class bg_bgmiss_bgcross_with_nu_kl2p45(has_neutrinos):
+    exposed = True
+
+class bg_bgmiss_bgcross_with_nu_kl5(has_neutrinos):
+    exposed = True
+
+class bg_bgmiss_bgcross_with_nu_kl0(has_neutrinos):
+    exposed = True
+
+class bg_bgmiss_bgcross_with_nu_kl0_lr_adjust(has_neutrinos):
+    exposed = True
+
+class ce_with_nu_kl1(has_neutrinos):
+    exposed = True
+
+class ce_with_nu_kl1_v2(has_neutrinos):
+    exposed = True
+
+class ce_with_nu_kl1_v3(has_neutrinos):
+    exposed = True
+
+class ce_with_nu_kl1_v4(has_neutrinos):
+    exposed = True
+
+class ce_with_nu_kl2p45(has_neutrinos):
+    exposed = True
+
+class ce_with_nu_kl5(has_neutrinos):
+    exposed = True
+
+class ce_with_nu_kl0(has_neutrinos):
+    exposed = True
+
+class ce_diag1111_kl0_kl1(has_neutrinos):
+    exposed = True
+
+class ce_diag1111_kl0_kl1_uneven_importance(has_neutrinos):
+    exposed = True
+
+class wm_all1s_kl0_kl1(has_neutrinos):
+    exposed = True
+
+class wm_diag11p5p5_kl0_kl1(has_neutrinos):
+    exposed = True
+
+class wm_diag11p5p5_kl0_kl1_uneven_importance(has_neutrinos):
+    exposed = True
+
+class ce_diag1111_kl0_kl1_fixed_v2(has_neutrinos):
+    exposed = True
+
+class ce_diag111_kl1_fixed_v1(has_neutrinos):
+    exposed = True
+
+class ce_diag1111_kl0_kl1_uneven(has_neutrinos):
+    exposed = True
+
+class diag1155_kl0_kl1(has_neutrinos):
+    exposed = True
+
+class diag11p5p5_kl0_kl1(has_neutrinos):
+    exposed = True
+
+class diag111_diag11_kl0_kl1_test(has_neutrinos):
+    exposed = True
+
+class diag111_diag11_kl0_kl1_test_2(has_neutrinos):
+    exposed = True
+
+

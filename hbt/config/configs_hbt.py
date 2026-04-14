@@ -2007,8 +2007,41 @@ def add_config(
         "all_bkg_plus_sig_miss":                        "lbn_prod20vbf_kl1_wm_all_bkg_plus_sig_miss_fold0_fold0.pt2",
         "new_loss_implementation":                      "lbn_prod20vbf_kl1_diag_111_new_loss_implementation_fold0_fold0.pt2",
         "new_implementation":                           "lbn_prod20vbf_kl1_diag_111_new_implementation_v2_fold0_fold0.pt2",
-        "test_regressed_nu":                            "lbn_prod20vbf_kl1_diag_111_test_regression_var_fold0_fold0.pt2"
+        "test_regressed_nu":                            "lbn_prod20vbf_kl1_diag_111_test_regression_var_fold0_fold0.pt2",
+        "bg_bgmiss_bgcross_nosig_with_nu":              "lbn_prod20vbf_kl1_best_wm_with_nu_no_sig_fold0_fold0.pt2",
 
+        "bg_bgmiss_bgcross_with_nu_kl1":                "lbn_prod20vbf_kl1_best_wm_with_nu_fold0_fold0.pt2",            
+        "bg_bgmiss_bgcross_with_nu_kl5":                "lbn_prod20vbf_kl5_best_wm_with_nu_fold0_fold0.pt2",
+        "bg_bgmiss_bgcross_with_nu_kl2p45":             "lbn_prod20vbf_kl2p45_best_wm_with_nu_fold0_fold0.pt2",
+        "bg_bgmiss_bgcross_with_nu_kl0":                "lbn_prod20vbf_kl0_best_wm_with_nu_fold0_fold0.pt2",    # bad training potentially
+        "bg_bgmiss_bgcross_with_nu_kl0_lr_adjust":      "lbn_prod20vbf_kl0_best_wm_with_nu_lr_fold0_fold0.pt2", # also potentially bad
+
+        "ce_with_nu_kl1":                               "lbn_prod20vbf_diag111_kl1_with_nu_fold0_fold0.pt2",
+        "ce_with_nu_kl1_v2":                            "lbn_prod20vbf_diag111_kl1_with_nu_v2_fold0_fold0.pt2",
+        "ce_with_nu_kl1_v3":                            "lbn_prod20vbf_diag111_kl1_with_nu_v3_fold0_fold0.pt2",
+        "ce_with_nu_kl1_v4":                            "lbn_prod20vbf_diag111_kl1_with_nu_v4_fold0_fold0.pt2",
+        "ce_with_nu_kl0":                               "lbn_prod20vbf_diag111_kl0_with_nu_fold0_fold0.pt2",
+        "ce_with_nu_kl2p45":                            "lbn_prod20vbf_diag111_kl2p45_with_nu_fold0_fold0.pt2",
+        "ce_with_nu_kl5":                               "lbn_prod20vbf_diag111_kl5_with_nu_fold0_fold0.pt2",
+
+        # with expanded classes, with bad sampler
+        "ce_diag1111_kl0_kl1":                          "lbn_prod20vbf_diag111_testing_v1_fold0_fold0.pt2",
+        "ce_diag1111_kl0_kl1_uneven_importance":        "lbn_prod20vbf_diag1111_kl0_kl1_fold0_fold0.pt2",
+
+        "wm_all1s_kl0_kl1":                             "lbn_prod20vbf_wm_all1s_kl0_kl1_fold0_fold0.pt2",
+        "wm_diag11p5p5_kl0_kl1":                        "lbn_prod20vbf_diag11p5p5_kl0_kl1_fold0_fold0.pt2",
+        "wm_diag11p5p5_kl0_kl1_uneven_importance":      "lbn_prod20vbf_diag11p5p5_kl0_kl1_v3_fold0_fold0.pt2",
+
+        # with expanded classes, fixed sampler
+        "ce_diag111_kl1_fixed_v1":                      "lbn_prod20vbf_diag111_kl1_fixed_sampler_fold0_fold0.pt2",
+        "ce_diag1111_kl0_kl1_fixed_v2":                 "lbn_prod20vbf_diag1111_kl0_kl1_v2_fold0_fold0.pt2",
+        "ce_diag1111_kl0_kl1_uneven":                   "lbn_prod20vbf_diag1111_kl0_kl1_uneven_fold0_fold0.pt2",
+        "diag1155_kl0_kl1":                             "lbn_prod20vbf_diag1155_kl0_kl1_fixed_fold0_fold0.pt2",
+        "diag11p5p5_kl0_kl1":                           "lbn_prod20vbf_diag11p5p5_kl0_kl1_fixed_fold0_fold0.pt2",
+
+        # with 3x3 + 2x2 weight matrices.
+        "diag111_diag11_kl0_kl1_test":                  "lbn_prod20vbf_diagA_diagB_kl0_kl1_test_fold0_fold0.pt2",
+        "diag111_diag11_kl0_kl1_test_2":                "lbn_prod20vbf_diagA_diagB_kl0_kl1_test_2_fold0_fold0.pt2",
     }
 
     for key, value in weight_matrix_model_dict.items():
