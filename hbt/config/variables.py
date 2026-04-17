@@ -1175,6 +1175,8 @@ def add_variables(config: od.Config) -> None:
             "diag11p5p5_kl0_kl1",
             "diag111_diag11_kl0_kl1_test",
             "diag111_diag11_kl0_kl1_test_2",
+            "diag111_diag00_kl0_kl1",
+            "diag111_diag11_kl0_kl1",
         ]
 
         for name in weight_matrix_models_list:

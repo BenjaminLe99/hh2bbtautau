@@ -2068,6 +2068,8 @@ def add_config(
         # with 3x3 + 2x2 weight matrices.
         "diag111_diag11_kl0_kl1_test":                  "lbn_prod20vbf_diagA_diagB_kl0_kl1_test_fold0_fold0.pt2",
         "diag111_diag11_kl0_kl1_test_2":                "lbn_prod20vbf_diagA_diagB_kl0_kl1_test_2_fold0_fold0.pt2",
+        "diag111_diag00_kl0_kl1":                       "lbn_prod20vbf_diagA111_diagB00_kl0_kl1_fold0_fold0.pt2",
+        "diag111_diag11_kl0_kl1":                       "lbn_prod20vbf_diagA111_diagB11_kl0_kl1_fold0_fold0.pt2",
     }
 
     for key, value in weight_matrix_model_dict.items():

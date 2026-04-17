@@ -113,7 +113,9 @@ class _external_dnn(Producer):
         })
 
         # output column names
-        # (could be generalized to allow inheriting classes to define different targets)
+        self.set_output_columns()
+
+    def set_output_columns(self):
         self.output_columns = [
             f"{self.output_prefix}_{name}"
             for name in ["hh", "tt", "dy"]
@@ -684,7 +686,7 @@ class new_implementation(_external_dnn):
 
 class has_neutrinos(_external_dnn):
     uses = _external_dnn.uses | {"reg_dnn_moe_nu*"}
-    require_producers = ["reg_dnn_moe"]    
+    require_producers = ["reg_dnn_moe"]
 
     def update_features(self, cont, cat, events, phi_lep):
         cont, cat = super().update_features(cont, cat, events, phi_lep)
@@ -693,6 +695,27 @@ class has_neutrinos(_external_dnn):
             for comp in ('px','py','pz'):
                 cont[f'nu{num}_{comp}'] = events[f'reg_dnn_moe_nu{num}_{comp}']
         return cont, cat
+    
+class subdivided_signal(_external_dnn):
+    def set_output_columns(self):
+        self.output_columns = [
+            f"{self.output_prefix}_{name}"
+            for name in ["dy", "tt", "hh"]
+        ]
+
+        # update produced columns
+        self.produces |= set(self.output_columns)
+
+    def store_scores(self, events: ak.Array, scores: Any, event_mask: ak.Array) -> ak.Array:
+        # if the signal class is subdivided, sum them into one hh class
+        # this assumes that classes are ordered as: dy, tt, kl0, kl1,...
+        scores[:, 2] = scores[:, 2:].sum(axis=1)
+        
+        for i, column in enumerate(self.output_columns):
+            values = self.empty_value * np.ones(len(events), dtype=np.float32)
+            values[event_mask] = scores[:, i]
+            events = set_ak_column_f32(events, column, values)
+        return events
 
 class test_regressed_nu(has_neutrinos):
     exposed = True
@@ -754,7 +777,7 @@ class wm_diag11p5p5_kl0_kl1(has_neutrinos):
 class wm_diag11p5p5_kl0_kl1_uneven_importance(has_neutrinos):
     exposed = True
 
-class ce_diag1111_kl0_kl1_fixed_v2(has_neutrinos):
+class ce_diag1111_kl0_kl1_fixed_v2(has_neutrinos,subdivided_signal):
     exposed = True
 
 class ce_diag111_kl1_fixed_v1(has_neutrinos):
@@ -769,10 +792,16 @@ class diag1155_kl0_kl1(has_neutrinos):
 class diag11p5p5_kl0_kl1(has_neutrinos):
     exposed = True
 
-class diag111_diag11_kl0_kl1_test(has_neutrinos):
+class diag111_diag11_kl0_kl1_test(has_neutrinos,subdivided_signal):
     exposed = True
 
 class diag111_diag11_kl0_kl1_test_2(has_neutrinos):
+    exposed = True
+
+class diag111_diag00_kl0_kl1(has_neutrinos,subdivided_signal):
+    exposed = True
+
+class diag111_diag11_kl0_kl1(has_neutrinos,subdivided_signal):
     exposed = True
 
 

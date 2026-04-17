@@ -1050,6 +1050,16 @@ diag111_diag11_kl0_kl1_test_2_no_shifts = default_no_shifts.derive(
     cls_dict={"variable": "diag111_diag11_kl0_kl1_test_2_hh_fine"},
 )
 
+diag111_diag00_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "diag111_diag00_kl0_kl1_no_shifts",
+    cls_dict={"variable": "diag111_diag00_kl0_kl1_hh_fine"},
+)
+
+diag111_diag11_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "diag111_diag11_kl0_kl1_no_shifts",
+    cls_dict={"variable": "diag111_diag11_kl0_kl1_hh_fine"},
+)
+
 
 class default_cc(default):
     """
