@@ -850,6 +850,21 @@ Bogmod_1_no_shifts = default_no_shifts.derive(
     cls_dict={"variable": "Bogmod_1_hh_fine"},
 )
 
+Bogmod_1_n10_no_shifts = default_no_shifts.derive(
+    "Bogmod_1_n10_no_shifts",
+    cls_dict={"variable": "Bogmod_1_n10_hh_equidistant"},
+)
+
+Bogmod_1_n15_no_shifts = default_no_shifts.derive(
+    "Bogmod_1_n15_no_shifts",
+    cls_dict={"variable": "Bogmod_1_n15_hh_equidistant"},
+)
+
+Bogmod_1_n20_no_shifts = default_no_shifts.derive(
+    "Bogmod_1_n20_no_shifts",
+    cls_dict={"variable": "Bogmod_1_n20_hh_equidistant"},
+)
+
 cross_entropy_no_shifts = default_no_shifts.derive(
     "cross_entropy_no_shifts",
     cls_dict={"variable": "cross_entropy_hh_fine"},
@@ -1058,6 +1073,126 @@ diag111_diag00_kl0_kl1_no_shifts = default_no_shifts.derive(
 diag111_diag11_kl0_kl1_no_shifts = default_no_shifts.derive(
     "diag111_diag11_kl0_kl1_no_shifts",
     cls_dict={"variable": "diag111_diag11_kl0_kl1_hh_fine"},
+)
+
+diag111_diag11_kl0_kl1_mhh_no_shifts = default_no_shifts.derive(
+    "diag111_diag11_kl0_kl1_mhh_no_shifts",
+    cls_dict={"variable": "diag111_diag11_kl0_kl1_mhh_hh_fine"},
+)
+
+diag111_diagp1p1_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "diag111_diagp1p1_kl0_kl1_no_shifts",
+    cls_dict={"variable": "diag111_diagp1p1_kl0_kl1_hh_fine"},
+)
+
+diag111_diagp25p25_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "diag111_diagp25p25_kl0_kl1_no_shifts",
+    cls_dict={"variable": "diag111_diagp25p25_kl0_kl1_hh_fine"},
+)
+
+diag111_diag00_kl0_kl1_mhh_no_shifts = default_no_shifts.derive(
+    "diag111_diag00_kl0_kl1_mhh_no_shifts",
+    cls_dict={"variable": "diag111_diag00_kl0_kl1_mhh_hh_fine"},
+)
+
+diag1111_kl0_kl1_mhh_no_shifts = default_no_shifts.derive(
+    "diag1111_kl0_kl1_mhh_no_shifts",
+    cls_dict={"variable": "diag1111_kl0_kl1_mhh_hh_fine"},
+)
+
+diag115_diagp1p1_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "diag115_diagp1p1_kl0_kl1_no_shifts",
+    cls_dict={"variable": "diag115_diagp1p1_kl0_kl1_hh_fine"},
+)
+
+diag551_diagp1p1_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "diag551_diagp1p1_kl0_kl1_no_shifts",
+    cls_dict={"variable": "diag551_diagp1p1_kl0_kl1_hh_fine"},
+)
+
+wmA_bg1c_wmB_cep1_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "wmA_bg1c_wmB_cep1_kl0_kl1_no_shifts",
+    cls_dict={"variable": "wmA_bg1c_wmB_cep1_kl0_kl1_hh_fine"},
+)
+
+wmA_ce1_wmB_p1klc_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "wmA_ce1_wmB_p1klc_kl0_kl1_no_shifts",
+    cls_dict={"variable": "wmA_ce1_wmB_p1klc_kl0_kl1_hh_fine"},
+)
+
+wmA_ce1_wmB_ce1_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "wmA_ce1_wmB_ce1_kl0_kl1_no_shifts",
+    cls_dict={"variable": "wmA_ce1_wmB_ce1_kl0_kl1_hh_fine"},
+)
+
+wm_A_ce1_wm_B_cep1_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "wm_A_ce1_wm_B_cep1_kl0_kl1_no_shifts",
+    cls_dict={"variable": "wm_A_ce1_wm_B_cep1_kl0_kl1_hh_fine"},
+)
+
+wm_A_bgf5_wm_B_ce0_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "wm_A_bgf5_wm_B_ce0_kl0_kl1_no_shifts",
+    cls_dict={"variable": "wm_A_bgf5_wm_B_ce0_kl0_kl1_hh_fine"},
+)
+
+wm_A_bgf5_bgm5_bgc1_wm_B_ce0_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "wm_A_bgf5_bgm5_bgc1_wm_B_ce0_kl0_kl1_no_shifts",
+    cls_dict={"variable": "wm_A_bgf5_bgm5_bgc1_wm_B_ce0_kl0_kl1_hh_fine"},
+)
+
+wm_A_bgf5_bgm1_wm_B_ce0_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "wm_A_bgf5_bgm1_wm_B_ce0_kl0_kl1_no_shifts",
+    cls_dict={"variable": "wm_A_bgf5_bgm1_wm_B_ce0_kl0_kl1_hh_fine"},
+)
+
+wm_A_bgf5_bgc1_wm_B_ce0_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "wm_A_bgf5_bgc1_wm_B_ce0_kl0_kl1_no_shifts",
+    cls_dict={"variable": "wm_A_bgf5_bgc1_wm_B_ce0_kl0_kl1_hh_fine"},
+)
+
+wm_A_bgf5_bgm5_bgc1_kl0_kl1_no_shifts = default_no_shifts.derive(
+    "wm_A_bgf5_bgm5_bgc1_kl0_kl1_no_shifts",
+    cls_dict={"variable": "wm_A_bgf5_bgm5_bgc1_kl0_kl1_hh_fine"},
+)
+
+wm_A_ce1_wm_B_ce0_no_shifts = default_no_shifts.derive(
+    "wm_A_ce1_wm_B_ce0_no_shifts",
+    cls_dict={"variable": "wm_A_ce1_wm_B_ce0_hh_fine"},
+)
+
+wm_A_ce1_kl0_kl1_mhh_weights_1p2_0p8_no_shifts = default_no_shifts.derive(
+    "wm_A_ce1_kl0_kl1_mhh_weights_1p2_0p8_no_shifts",
+    cls_dict={"variable": "wm_A_ce1_kl0_kl1_mhh_weights_1p2_0p8_hh_fine"},
+)
+
+wm_A_ce1_kl0_kl1_mhh_weights_1p5_0p5_no_shifts = default_no_shifts.derive(
+    "wm_A_ce1_kl0_kl1_mhh_weights_1p5_0p5_no_shifts",
+    cls_dict={"variable": "wm_A_ce1_kl0_kl1_mhh_weights_1p5_0p5_hh_fine"},
+)
+
+wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p2_0p8_cosine_no_shifts = default_no_shifts.derive(
+    "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p2_0p8_cosine_no_shifts",
+    cls_dict={"variable": "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p2_0p8_cosine_hh_fine"},
+)
+
+wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p5_0p5_cosine_no_shifts = default_no_shifts.derive(
+    "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p5_0p5_cosine_no_shifts",
+    cls_dict={"variable": "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p5_0p5_cosine_hh_fine"},
+)
+
+wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p2_0p8_no_shifts = default_no_shifts.derive(
+    "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p2_0p8_no_shifts",
+    cls_dict={"variable": "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p2_0p8_hh_fine"},
+)
+
+wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p5_0p5_no_shifts = default_no_shifts.derive(
+    "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p5_0p5_no_shifts",
+    cls_dict={"variable": "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p5_0p5_hh_fine"},
+)
+
+wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1_1_cosine_no_shifts = default_no_shifts.derive(
+    "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1_1_cosine_no_shifts",
+    cls_dict={"variable": "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1_1_cosine_hh_fine"},
 )
 
 

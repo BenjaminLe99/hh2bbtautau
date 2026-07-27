@@ -1132,7 +1132,31 @@ def add_variables(config: od.Config) -> None:
             binning=np.linspace(0.0, 1.0, 11).tolist(),
             x_title=rf"DNN {proc.upper()} output node",
             aux={"x_transformations": "equal_distance_with_indices"},
-        )     
+        )
+
+        add_variable(
+            name=f"Bogmod_1_n10_{proc}_equidistant",
+            expression=f"Bogmod_1_n10_{proc}",
+            binning=np.linspace(0.0, 1.0, 11).tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"Bogmod_1_n15_{proc}_equidistant",
+            expression=f"Bogmod_1_n15_{proc}",
+            binning=np.linspace(0.0, 1.0, 16).tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
+
+        add_variable(
+            name=f"Bogmod_1_n20_{proc}_equidistant",
+            expression=f"Bogmod_1_n20_{proc}",
+            binning=np.linspace(0.0, 1.0, 21).tolist(),
+            x_title=rf"DNN {proc.upper()} output node",
+            aux={"x_transformations": "equal_distance_with_indices"},
+        )
             
         weight_matrix_models_list = [
             "cross_entropy",
@@ -1177,6 +1201,30 @@ def add_variables(config: od.Config) -> None:
             "diag111_diag11_kl0_kl1_test_2",
             "diag111_diag00_kl0_kl1",
             "diag111_diag11_kl0_kl1",
+            "diag111_diag11_kl0_kl1_mhh",
+            "diag111_diagp1p1_kl0_kl1",
+            "diag111_diagp25p25_kl0_kl1",
+            "diag111_diag00_kl0_kl1_mhh",
+            "diag1111_kl0_kl1_mhh",
+            "diag115_diagp1p1_kl0_kl1",
+            "diag551_diagp1p1_kl0_kl1",
+            "wmA_bg1c_wmB_cep1_kl0_kl1",
+            "wmA_ce1_wmB_p1klc_kl0_kl1",
+            "wmA_ce1_wmB_ce1_kl0_kl1",
+            "wm_A_ce1_wm_B_cep1_kl0_kl1",
+            "wm_A_bgf5_wm_B_ce0_kl0_kl1",
+            "wm_A_bgf5_bgm5_bgc1_wm_B_ce0_kl0_kl1",
+            "wm_A_bgf5_bgm1_wm_B_ce0_kl0_kl1",
+            "wm_A_bgf5_bgc1_wm_B_ce0_kl0_kl1",
+            "wm_A_bgf5_bgm5_bgc1_kl0_kl1",
+            "wm_A_ce1_wm_B_ce0",
+            "wm_A_ce1_kl0_kl1_mhh_weights_1p2_0p8",
+            "wm_A_ce1_kl0_kl1_mhh_weights_1p5_0p5",
+            "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p2_0p8_cosine",
+            "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p5_0p5_cosine",
+            "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p2_0p8",
+            "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p5_0p5",
+            "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1_1_cosine",
         ]
 
         for name in weight_matrix_models_list:

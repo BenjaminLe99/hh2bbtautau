@@ -1965,6 +1965,9 @@ def add_config(
     add_external("torch_kl1_kt1_sig_loss_big_batch", ("/data/dust/user/wiedersb/HH_DNN/models/test_big_batch_kl1_kt1_fold0.pt2", "v1"))
     add_external("torch_kl1_kt1_sig_loss_very_big", ("/data/dust/user/wiedersb/HH_DNN/models/test_very_big_batch_kl1_kt1_fold0.pt2", "v1"))
     add_external("Bogmod_1", ("/data/dust/user/wiedersb/HH_DNN/models/test_unc_b_0p0_fold0.pt2", "v1"))
+    add_external("Bogmod_1_n10", ("/data/dust/user/wiedersb/HH_DNN/models/test_unc_b_0p0_fold0.pt2", "v1"))
+    add_external("Bogmod_1_n15", ("/data/dust/user/wiedersb/HH_DNN/models/test_unc_b_0p0_fold0.pt2", "v1"))
+    add_external("Bogmod_1_n20", ("/data/dust/user/wiedersb/HH_DNN/models/test_unc_b_0p0_fold0.pt2", "v1"))
 
 
     lbnspath = "/afs/desy.de/user/l/lebenjam/Master/neuralnetwork/mlmodels/lbns/"
@@ -2068,8 +2071,34 @@ def add_config(
         # with 3x3 + 2x2 weight matrices.
         "diag111_diag11_kl0_kl1_test":                  "lbn_prod20vbf_diagA_diagB_kl0_kl1_test_fold0_fold0.pt2",
         "diag111_diag11_kl0_kl1_test_2":                "lbn_prod20vbf_diagA_diagB_kl0_kl1_test_2_fold0_fold0.pt2",
-        "diag111_diag00_kl0_kl1":                       "lbn_prod20vbf_diagA111_diagB00_kl0_kl1_fold0_fold0.pt2",
+        "diag111_diag00_kl0_kl1":                       "lbn_prod20vbf_diagA111_diagB00_kl0_kl1_fold0_fold0.pt2", # accidentally used the same file name
         "diag111_diag11_kl0_kl1":                       "lbn_prod20vbf_diagA111_diagB11_kl0_kl1_fold0_fold0.pt2",
+        "diag111_diag11_kl0_kl1_mhh":                   "lbn_prod20vbf_diagA111_diagB11_kl0_kl1_mhh_fold0_fold0.pt2",
+
+        # with mhh in the lbn
+        "diag111_diagp1p1_kl0_kl1":                                 "lbn_prod20vbf_diagA111_diagBp1p1_kl0_kl1_fold0_fold0.pt2",
+        "diag111_diagp25p25_kl0_kl1":                               "lbn_prod20vbf_diagA111_diagBp25p25_kl0_kl1_fold0_fold0.pt2",
+        "diag111_diag00_kl0_kl1_mhh":                               "lbn_prod20vbf_diagA111_diagB00_kl0_kl1_fold0_fold0.pt2",
+        "diag1111_kl0_kl1_mhh":                                     "lbn_prod20vbf_diagA1111_kl0_kl1_fold0_fold0.pt2",
+        "diag115_diagp1p1_kl0_kl1":                                 "lbn_prod20vbf_diagA115_diagBp1p1_kl0_kl1_fold0_fold0.pt2",
+        "diag551_diagp1p1_kl0_kl1":                                 "lbn_prod20vbf_diagA551_diagBp1p1_kl0_kl1_fold0_fold0.pt2",
+        "wmA_bg1c_wmB_cep1_kl0_kl1":                                "lbn_prod20vbf_wm_A_bg1c_wm_B_cep1_kl0_kl1_fold0_fold0.pt2",
+        "wmA_ce1_wmB_p1klc_kl0_kl1":                                "lbn_prod20vbf_wm_A_ce1_wm_B_p1klc_kl0_kl1_fold0_fold0.pt2",
+        "wmA_ce1_wmB_ce1_kl0_kl1":                                  "lbn_prod20vbf_wm_A_ce1_wm_B_ce1_kl0_kl1_fold0_fold0.pt2",
+        "wm_A_ce1_wm_B_cep1_kl0_kl1":                               "wm_A_ce1_wm_B_cep1_kl0_kl1_fold0_fold0.pt2",
+        "wm_A_bgf5_wm_B_ce0_kl0_kl1":                               "lbn_prod20vbf_wm_A_bgf5_wm_B_ce0_kl0_kl1_fold0_fold0.pt2",
+        "wm_A_bgf5_bgm5_bgc1_wm_B_ce0_kl0_kl1":                     "lbn_prod20vbf_wm_A_bgf5_bgm5_bgc1_wm_B_ce0_kl0_kl1_fold0_fold0.pt2",
+        "wm_A_bgf5_bgm1_wm_B_ce0_kl0_kl1":                          "lbn_prod20vbf_wm_A_bgf5_bgm1_wm_B_ce0_kl0_kl1_fold0_fold0.pt2",
+        "wm_A_bgf5_bgc1_wm_B_ce0_kl0_kl1":                          "lbn_prod20vbf_wm_A_bgf5_bgc1_wm_B_ce0_kl0_kl1_fold0_fold0.pt2",
+        "wm_A_bgf5_bgm5_bgc1_kl0_kl1":                              "wm_A_bgf5_bgm5_bgc1_kl0_kl1_fold0_fold0.pt2",
+        "wm_A_ce1_wm_B_ce0":                                        "wm_A_ce1_wm_B_ce0_fold0.pt2",
+        "wm_A_ce1_kl0_kl1_mhh_weights_1p2_0p8":                     "wm_A_ce1_kl0_kl1_mhh_weights_1p2_0p8_fold0_fold0.pt2",
+        "wm_A_ce1_kl0_kl1_mhh_weights_1p5_0p5":                     "wm_A_ce1_kl0_kl1_mhh_weights_1p5_0p5_fold0_fold0.pt2",
+        "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p2_0p8_cosine":   "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p2_0p8_cosine_fold0_fold0.pt2",
+        "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p5_0p5_cosine":   "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p5_0p5_cosine_fold0_fold0.pt2",
+        "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p2_0p8":          "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p2_0p8_v2_fold0_fold0.pt2",
+        "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p5_0p5":          "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1p5_0p5_fold0_fold0.pt2",
+        "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1_1_cosine":       "wm_A_bgf5_bgm5_bgc1_kl0_kl1_mhh_weights_1_1_cosine_fold0_fold0.pt2",
     }
 
     for key, value in weight_matrix_model_dict.items():
