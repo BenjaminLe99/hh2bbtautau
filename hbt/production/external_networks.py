@@ -112,7 +112,9 @@ class _external_dnn(Producer):
             for shift_inst in self.config_inst.shifts
             if shift_inst.has_tag({"jec", "jer", "tec", "eec", "eer"})
         })
+        self.set_output_columns()
 
+    def set_output_columns(self):
         # output column names
         # (could be generalized to allow inheriting classes to define different targets)
         self.output_columns = [
@@ -122,6 +124,7 @@ class _external_dnn(Producer):
 
         # update produced columns
         self.produces |= set(self.output_columns)
+
 
     def requires_func(self, task: law.Task, reqs: dict, **kwargs) -> None:
         super().requires_func(task=task, reqs=reqs, **kwargs)
