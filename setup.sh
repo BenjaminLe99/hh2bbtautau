@@ -37,6 +37,26 @@ setup_hbt() {
     local cf_base="${this_dir}/modules/columnflow"
     CF_SKIP_SETUP="true" source "${cf_base}/setup.sh" "" || return "$?"
 
+
+    #
+    # opinionated host specific checks
+    #
+
+    # on maxwell, check that the user's primary group is af-cms
+    local on_maxwell="$( [[ "$( hostname )" = max-*.desy.de ]] && echo "true" || echo "false" )"
+    if ${on_maxwell}; then
+        local primary_group="$( id -gn )"
+        if [ "${primary_group}" != "af-cms" ]; then
+            cf_color red_bright "detected maxwell node but primary group is '${primary_group}' and not 'af-cms', so first run"
+            echo
+            cf_color bright "> newgrp af-cms"
+            echo
+            cf_color red_bright "which starts a new subshell with your primary group changed, then re-source the setup"
+            return "1"
+        fi
+    fi
+
+
     #
     # prevent repeated setups
     #
@@ -144,6 +164,16 @@ setup_hbt() {
     # as local mounts are typically not available remotely
     if ${CF_REMOTE_ENV}; then
         sed -i -r 's/(.+\: ?)wlcg_mirrored, local_.+, ?(wlcg_[^\s]+)/\1wlcg, \2/g' "${LAW_CONFIG_FILE}"
+    fi
+
+    # proxy validity check
+    if ! $( cf_cast_bool "${HBT_SKIP_PROXY_CHECK}" ); then
+        local voms_timeleft="$( 2>/dev/null voms-proxy-info -timeleft )"
+        if [ "$?" != "0" ] || [ -z "${voms_timeleft}" ]; then
+            cf_color red_bright "no valid coms-proxy found"
+        elif [[ "${voms_timeleft}" -lt "7200" ]]; then
+            cf_color red "voms-proxy expires in ${voms_timeleft} seconds"
+        fi
     fi
 
     #

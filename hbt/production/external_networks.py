@@ -13,13 +13,12 @@ import law
 from columnflow.production import Producer
 from columnflow.production.util import attach_coffea_behavior
 from columnflow.columnar_util import (
-    set_ak_column, attach_behavior, flat_np_view, EMPTY_FLOAT, default_coffea_collections, ak_concatenate_safe,
-    layout_ak_array,
+    set_ak_column, attach_behavior, flat_np_view, EMPTY_FLOAT, ak_concatenate_safe, layout_ak_array,
 )
 from columnflow.util import maybe_import, dev_sandbox, DotDict
 from columnflow.types import Any, Literal
 
-from hbt.util import MET_COLUMN
+from hbt.util import MET_COLUMN, rotate_px_py
 
 np = maybe_import("numpy")
 scipy = maybe_import("scipy")
@@ -33,16 +32,6 @@ set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
 set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
 
 BTagType = Literal["pnet", "upart", "none"]
-
-
-def rotate_to_phi(ref_phi: ak.Array, px: ak.Array, py: ak.Array) -> tuple[ak.Array, ak.Array]:
-    """
-    Rotates a momentum vector extracted from *events* in the transverse plane to a reference phi
-    angle *ref_phi*. Returns the rotated px and py components in a 2-tuple.
-    """
-    new_phi = np.arctan2(py, px, dtype=np.float64) - ref_phi
-    pt = (px**2 + py**2)**0.5
-    return pt * np.cos(new_phi), pt * np.sin(new_phi)
 
 
 class _external_dnn(Producer):
@@ -75,6 +64,9 @@ class _external_dnn(Producer):
     produce_features: bool | None = None
     features_prefix: str = ""
 
+    # aggregation method
+    ensemble_aggregation: Literal["mean"] | None = None
+
     # produced columns are added in the deferred init below
     sandbox = dev_sandbox("bash::$HBT_BASE/sandboxes/venv_hbt.sh")
 
@@ -91,7 +83,16 @@ class _external_dnn(Producer):
         # name of the model bundle in the external files
         return self.cls_name
 
+    @property
+    def local_model_path(self) -> str | law.LocalFileTarget | None:
+        # when set to an existing location, the model is loaded from there instead of the external files
+        return None
+
     def init_func(self, **kwargs) -> None:
+        super().init_func(**kwargs)
+
+        assert self.btag_type in {"pnet", "upart", "none"}
+
         # set feature production options when requested
         if self.produce_features is None:
             self.produce_features = self.config_inst.x.sync
@@ -113,9 +114,7 @@ class _external_dnn(Producer):
         })
 
         # output column names
-        self.set_output_columns()
-
-    def set_output_columns(self):
+        # (could be generalized to allow inheriting classes to define different targets)
         self.output_columns = [
             f"{self.output_prefix}_{name}"
             for name in ["hh", "tt", "dy"]
@@ -125,14 +124,14 @@ class _external_dnn(Producer):
         self.produces |= set(self.output_columns)
 
     def requires_func(self, task: law.Task, reqs: dict, **kwargs) -> None:
-        super().requires_func(task, reqs, **kwargs)
-        
-        if "external_files" not in reqs:
+        super().requires_func(task=task, reqs=reqs, **kwargs)
+
+        if self.local_model_path is None and "external_files" not in reqs:
             from columnflow.tasks.external import BundleExternalFiles
             reqs["external_files"] = BundleExternalFiles.req(task)
 
     def setup_func(self, task: law.Task, reqs: dict[str, DotDict[str, Any]], **kwargs) -> None:
-        super().setup_func(task, reqs, **kwargs)
+        super().setup_func(task=task, reqs=reqs, **kwargs)
 
         from hbt.ml.evaluators import TorchEvaluator
 
@@ -140,10 +139,13 @@ class _external_dnn(Producer):
             task.taf_torch_evaluator = TorchEvaluator()
         self.evaluator = task.taf_torch_evaluator
 
-        bundle = reqs["external_files"]
-        bundle.files
-        model_path = getattr(bundle.files, self.external_name)
-        self.evaluator.add_model(self.cls_name, model_path.abspath)
+        if (local_model_path := self.local_model_path) is None:
+            bundle = reqs["external_files"]
+            bundle.files
+            model_path = getattr(bundle.files, self.external_name)
+            self.evaluator.add_model(self.cls_name, model_path.abspath)
+        else:
+            self.evaluator.add_model(self.cls_name, law.target.file.get_path(local_model_path))
 
         # categorical values handled by the network
         # (names and values from training code that was aligned to KLUB notation)
@@ -161,36 +163,122 @@ class _external_dnn(Producer):
         """
         Stops the Torch evaluator.
         """
+        super().teardown_func(task=task, **kwargs)
+
         if (evaluator := getattr(task, "taf_torch_evaluator", None)):
             evaluator.stop()
         task.taf_torch_evaluator = None
         self.evaluator = None
 
-    def call_func(self, events: ak.Array, **kwargs) -> ak.Array:
+    def call_func(self, events: ak.Array, task: law.Task, **kwargs) -> ak.Array:
         # start the evaluator
         if not self.evaluator.running:
             self.evaluator.start()
 
-        # ensure coffea behavior
-        events = self[attach_coffea_behavior](
-            events,
-            collections={"HHBJet": default_coffea_collections["Jet"]},
-            **kwargs,
+        # precompute variables stored directly in the events for easier access later on
+        events = self.update_events(events)
+
+        # prepare continuous and categorical network inputs
+        # ! NOTE: the order in which inputs are assigned to the DotDicts must match exactly the networks' feature order
+        cont = DotDict()
+        cat = DotDict()
+        self.define_categorical_inputs(events, cat)
+        self.define_continuous_inputs(events, cont, cat)
+
+        # apply event mask to all features
+        event_mask = self.define_event_mask(events, cat, cont)
+        if (n_mask := ak.sum(event_mask)) == 0:
+            task.logger.warning(
+                f"{self.cls_name}: 0 / {len(events)} selected for evaluation ({task.dataset_inst.name})",
+            )
+        for n, v in cont.items():
+            cont[n] = v[event_mask]
+        for n, v in cat.items():
+            cat[n] = v[event_mask]
+
+        # check for non-finite continuous inputs
+        invalid_stats = {}
+        for n, v in cont.items():
+            if (m := np.asarray(~np.isfinite(v))).any():
+                invalid_stats[n] = m
+        if invalid_stats:
+            raise Exception(
+                f"found {len(invalid_stats)} continuous feature(s) in {n_mask} events with non-finite values:\n  - " +
+                "\n  - ".join(f"{n}: {m.sum()} -> {100 * m.mean():.2f}%" for n, m in invalid_stats.items()),
+            )
+
+        # build continuous inputs
+        continuous_inputs = np.concatenate(
+            [np.asarray(t[..., None], dtype=np.float32) for t in cont.values()],
+            axis=1,
         )
 
-        # get visible tau decay products, consider them all as tau types
-        vis_taus = attach_behavior(
+        # build categorical inputs
+        categorical_inputs = np.concatenate(
+            [np.asarray(t[..., None], dtype=np.int32) for t in cat.values()],
+            axis=1,
+        )
+
+        # evaluate the model
+        scores = self.evaluator(self.cls_name, categorical_inputs, continuous_inputs)
+
+        # aggregate ensemble output if needed
+        if scores.ndim == 3:
+            scores = self.aggregate_ensemble_output(scores)
+
+        # validate scores (probably replacing nans)
+        scores = self.validate_scores(scores)
+
+        # store scores in events
+        events = self.store_scores(events, scores, event_mask)
+
+        # optionally store input features
+        if self.produce_features:
+            for name in cont:
+                values = self.empty_value * np.ones(len(events), dtype=np.float32)
+                values[event_mask] = ak.flatten(np.asarray(cont[name][..., None], dtype=np.float32))
+                events = set_ak_column_f32(events, f"{self.features_prefix}{self.cls_name}_{name}", values)
+            for name in cat:
+                values = int(self.empty_value) * np.ones(len(events), dtype=np.int32)
+                values[event_mask] = ak.flatten(np.asarray(cat[name][..., None], dtype=np.int32))
+                events = set_ak_column_i32(events, f"{self.features_prefix}{self.cls_name}_{name}", values)
+
+        return events
+
+    def update_events(self, events: ak.Array) -> ak.Array:
+        # ensure coffea behavior for HHBJets
+        events = self[attach_coffea_behavior](events, collections={"HHBJet": "Jet"})
+
+        # store visible tau decay products, consider them all as tau types
+        vis_tau = attach_behavior(
             ak_concatenate_safe((events.Electron, events.Muon, events.Tau), axis=1),
             type_name="Tau",
         )
-        vis_tau1, vis_tau2 = vis_taus[:, 0], vis_taus[:, 1]
+        events = set_ak_column(events, "feat_vis_tau", vis_tau)
+
+        # compute angle from visible mother particle of vis_tau1 and vis_tau2
+        # used to rotate the kinematics of dau{1,2}, met, bjet{1,2} and fatjets relative to it
+        dilep_phi = np.arctan2(
+            vis_tau[:, 0].py + vis_tau[:, 1].py,
+            vis_tau[:, 0].px + vis_tau[:, 1].px,
+            dtype=np.float64,
+        )
+        events = set_ak_column(events, "feat_dilep_phi", dilep_phi)
+
+        return events
+
+    def define_categorical_inputs(self, events: ak.Array, cat: DotDict) -> None:
+        # define the pair type (KLUBs channel id)
+        pair_type = np.zeros(len(events), dtype=np.int32)
+        for channel_id, pair_type_id in self.channel_id_to_pair_type.items():
+            pair_type[events.channel_id == channel_id] = pair_type_id
+        cat.pair_type = pair_type
 
         # get decay mode of first lepton (e, mu or tau)
         tautau_mask = events.channel_id == self.config_inst.channels.n.tautau.id
         dm1 = -1 * np.ones(len(events), dtype=np.int32)
         if ak.any(tautau_mask):
             dm1[tautau_mask] = events.Tau.decayMode[tautau_mask][:, 0]
-
         # get decay mode of second lepton (also a tau, but position depends on channel)
         leptau_mask = (
             (events.channel_id == self.config_inst.channels.n.etau.id) |
@@ -201,78 +289,42 @@ class _external_dnn(Producer):
             dm2[leptau_mask] = events.Tau.decayMode[leptau_mask][:, 0]
         if ak.any(tautau_mask):
             dm2[tautau_mask] = events.Tau.decayMode[tautau_mask][:, 1]
-
         # the dnn treats dm 2 as 1, so we need to map it
-        dm1 = np.where(dm1 == 2, 1, dm1)
-        dm2 = np.where(dm2 == 2, 1, dm2)
+        cat.dm1 = np.where(dm1 == 2, 1, dm1)
+        cat.dm2 = np.where(dm2 == 2, 1, dm2)
 
-        # whether the events is resolvede, boosted or neither
-        has_jet_pair = ak.num(events.HHBJet) >= 2
-        has_fatjet = ak.num(events.FatJet) >= 1
+        # visible tau charge
+        cat.vis_tau1_charge = np.asarray(events.feat_vis_tau[:, 0].charge, dtype=np.int32)
+        cat.vis_tau2_charge = np.asarray(events.feat_vis_tau[:, 1].charge, dtype=np.int32)
 
-        # convert channel_id to pair_type
-        pair_type = np.full(len(events), -1, dtype=np.int32)
-        pair_type[events.channel_id == self.config_inst.channels.n.mutau.id] = 0
-        pair_type[events.channel_id == self.config_inst.channels.n.etau.id] = 1
-        pair_type[events.channel_id == self.config_inst.channels.n.tautau.id] = 2
+        # whether the events is resolved, boosted or neither
+        cat.has_jet_pair = np.asarray(ak.num(events.HHBJet) >= 2, dtype=np.int32)
+        cat.has_fatjet = np.asarray(ak.num(events.FatJet) >= 1, dtype=np.int32)
 
-        # before preparing the network inputs, define a mask of events which have caregorical features
-        # that are actually covered by the networks embedding layers; other events cannot be evaluated!
-        event_mask = (
-            np.isin(pair_type, self.embedding_expected_inputs["pair_type"]) &
-            np.isin(dm1, self.embedding_expected_inputs["decay_mode1"]) &
-            np.isin(dm2, self.embedding_expected_inputs["decay_mode2"]) &
-            np.isin(vis_tau1.charge, self.embedding_expected_inputs["charge1"]) &
-            np.isin(vis_tau2.charge, self.embedding_expected_inputs["charge2"]) &
-            (has_jet_pair | has_fatjet)
-        )
-
-        # hook to update the event mask base on additional event info
-        event_mask = self.update_event_mask(events, event_mask)
-
-        # apply to all arrays needed until now
-        _events = events[event_mask]
-        pair_type = pair_type[event_mask]
-        vis_tau1, vis_tau2 = vis_tau1[event_mask], vis_tau2[event_mask]
-        tautau_mask = tautau_mask[event_mask]
-        dm1, dm2 = dm1[event_mask], dm2[event_mask]
-        has_jet_pair, has_fatjet = has_jet_pair[event_mask], has_fatjet[event_mask]
-
-        # prepare network inputs
-        cont = DotDict()
-        cat = DotDict()
-        
-        """
-        - update feature update hook to accept and return two dicts
-        """
-
-        # compute angle from visible mother particle of vis_tau1 and vis_tau2
-        # used to rotate the kinematics of dau{1,2}, met, bjet{1,2} and fatjets relative to it
-        phi_lep = np.arctan2(vis_tau1.py + vis_tau2.py, vis_tau1.px + vis_tau2.px, dtype=np.float64)
+    def define_continuous_inputs(self, events: ak.Array, cont: DotDict, cat: DotDict) -> None:
+        rot = functools.partial(rotate_px_py, ref_phi=-events.feat_dilep_phi)
+        has_jet_pair = np.asarray(cat.has_jet_pair, dtype=bool)
+        has_fatjet = np.asarray(cat.has_fatjet, dtype=bool)
 
         # MET variables
-        _met = _events[self.config_inst.x.met_name]
-        cont.met_px, cont.met_py = rotate_to_phi(
-            phi_lep,
-            _met.pt * np.cos(_met.phi),
-            _met.pt * np.sin(_met.phi),
-        )
+        _met = events[self.config_inst.x.met_name]
+        cont.met_px, cont.met_py = rot(_met.pt * np.cos(_met.phi), _met.pt * np.sin(_met.phi))
         cont.met_cov00, cont.met_cov01, cont.met_cov11 = _met.covXX, _met.covXY, _met.covYY
 
         # lepton 1
-        cont.vis_tau1_px, cont.vis_tau1_py = rotate_to_phi(phi_lep, vis_tau1.px, vis_tau1.py)
-        cont.vis_tau1_pz, cont.vis_tau1_e = vis_tau1.pz, vis_tau1.energy
+        cont.vis_tau1_px, cont.vis_tau1_py = rot(events.feat_vis_tau.px[:, 0], events.feat_vis_tau.py[:, 0])
+        cont.vis_tau1_pz, cont.vis_tau1_e = events.feat_vis_tau.pz[:, 0], events.feat_vis_tau.energy[:, 0]
 
         # lepton 2
-        cont.vis_tau2_px, cont.vis_tau2_py = rotate_to_phi(phi_lep, vis_tau2.px, vis_tau2.py)
-        cont.vis_tau2_pz, cont.vis_tau2_e = vis_tau2.pz, vis_tau2.energy
+        cont.vis_tau2_px, cont.vis_tau2_py = rot(events.feat_vis_tau.px[:, 1], events.feat_vis_tau.py[:, 1])
+        cont.vis_tau2_pz, cont.vis_tau2_e = events.feat_vis_tau.pz[:, 1], events.feat_vis_tau.energy[:, 1]
 
         # there might be less than two jets or no fatjet, so pad them
-        bjets = ak.pad_none(_events.HHBJet, 2, axis=1)
-        fatjet = ak.pad_none(_events.FatJet, 1, axis=1)[:, 0]
+        bjets = ak.pad_none(events.HHBJet, 2, axis=1)
+        fatjet = ak.pad_none(events.FatJet, 1, axis=1)[:, 0]
 
         # bjet 1
-        cont.bjet1_px, cont.bjet1_py = rotate_to_phi(phi_lep, bjets[:, 0].px, bjets[:, 0].py)
+        cont.bjet1_px, cont.bjet1_py = rot(bjets[:, 0].px, bjets[:, 0].py)
         cont.bjet1_pz, cont.bjet1_e = bjets[:, 0].pz, bjets[:, 0].energy
         if self.btag_type == "pnet":
             cont.bjet1_tag_b = bjets[:, 0].btagPNetB
@@ -283,7 +335,7 @@ class _external_dnn(Producer):
         cont.bjet1_hhbtag = bjets[:, 0].hhbtag
 
         # bjet 2
-        cont.bjet2_px, cont.bjet2_py = rotate_to_phi(phi_lep, bjets[:, 1].px, bjets[:, 1].py)
+        cont.bjet2_px, cont.bjet2_py = rot(bjets[:, 1].px, bjets[:, 1].py)
         cont.bjet2_pz, cont.bjet2_e = bjets[:, 1].pz, bjets[:, 1].energy
         if self.btag_type == "pnet":
             cont.bjet2_tag_b = bjets[:, 1].btagPNetB
@@ -294,11 +346,11 @@ class _external_dnn(Producer):
         cont.bjet2_hhbtag = bjets[:, 1].hhbtag
 
         # fatjet variables
-        cont.fatjet_px, cont.fatjet_py = rotate_to_phi(phi_lep, fatjet.px, fatjet.py)
+        cont.fatjet_px, cont.fatjet_py = rot(fatjet.px, fatjet.py)
         cont.fatjet_pz, cont.fatjet_e = fatjet.pz, fatjet.energy
 
-        # mask values as done during training of the network
-        def mask_values(mask, value, *fields):
+        # mask values of various fields as done during training of the network
+        def mask_fields(mask, value, *fields):
             if not ak.any(mask):
                 return
             for field in fields:
@@ -308,11 +360,11 @@ class _external_dnn(Producer):
                 arr[flat_np_view(mask)] = value
                 cont[field] = layout_ak_array(arr, cont[field]) if cont[field].ndim > 1 else arr
 
-        mask_values(~has_jet_pair, 0.0, "bjet1_px", "bjet1_py", "bjet1_pz", "bjet1_e")
-        mask_values(~has_jet_pair, 0.0, "bjet2_px", "bjet2_py", "bjet2_pz", "bjet2_e")
-        mask_values(~has_jet_pair, -1.0, "bjet1_tag_b", "bjet1_tag_cvsb", "bjet1_tag_cvsl", "bjet1_hhbtag")
-        mask_values(~has_jet_pair, -1.0, "bjet2_tag_b", "bjet2_tag_cvsb", "bjet2_tag_cvsl", "bjet2_hhbtag")
-        mask_values(~has_fatjet, 0.0, "fatjet_px", "fatjet_py", "fatjet_pz", "fatjet_e")
+        mask_fields(~has_jet_pair, 0.0, "bjet1_px", "bjet1_py", "bjet1_pz", "bjet1_e")
+        mask_fields(~has_jet_pair, 0.0, "bjet2_px", "bjet2_py", "bjet2_pz", "bjet2_e")
+        mask_fields(~has_jet_pair, -1.0, "bjet1_tag_b", "bjet1_tag_cvsb", "bjet1_tag_cvsl", "bjet1_hhbtag")
+        mask_fields(~has_jet_pair, -1.0, "bjet2_tag_b", "bjet2_tag_cvsb", "bjet2_tag_cvsl", "bjet2_hhbtag")
+        mask_fields(~has_fatjet, 0.0, "fatjet_px", "fatjet_py", "fatjet_pz", "fatjet_e")
 
         # combine daus
         cont.htt_e = cont.vis_tau1_e + cont.vis_tau2_e
@@ -325,87 +377,60 @@ class _external_dnn(Producer):
         cont.hbb_px = cont.bjet1_px + cont.bjet2_px
         cont.hbb_py = cont.bjet1_py + cont.bjet2_py
         cont.hbb_pz = cont.bjet1_pz + cont.bjet2_pz
-        mask_values(~has_jet_pair, 0.0, "hbb_e", "hbb_px", "hbb_py", "hbb_pz")
+        mask_fields(~has_jet_pair, 0.0, "hbb_e", "hbb_px", "hbb_py", "hbb_pz")
 
         # htt + hbb
         cont.htthbb_e = cont.htt_e + cont.hbb_e
         cont.htthbb_px = cont.htt_px + cont.hbb_px
         cont.htthbb_py = cont.htt_py + cont.hbb_py
         cont.htthbb_pz = cont.htt_pz + cont.hbb_pz
-        mask_values(~has_jet_pair, 0.0, "htthbb_e", "htthbb_px", "htthbb_py", "htthbb_pz")
+        mask_fields(~has_jet_pair, 0.0, "htthbb_e", "htthbb_px", "htthbb_py", "htthbb_pz")
 
         # htt + fatjet
         cont.httfatjet_e = cont.htt_e + cont.fatjet_e
         cont.httfatjet_px = cont.htt_px + cont.fatjet_px
         cont.httfatjet_py = cont.htt_py + cont.fatjet_py
         cont.httfatjet_pz = cont.htt_pz + cont.fatjet_pz
-        mask_values(~has_fatjet, 0.0, "httfatjet_e", "httfatjet_px", "httfatjet_py", "httfatjet_pz")
+        mask_fields(~has_fatjet, 0.0, "httfatjet_e", "httfatjet_px", "httfatjet_py", "httfatjet_pz")
 
-        # assign categorical inputs via names too
-        cat.pair_type = pair_type
-        cat.dm1 = dm1
-        cat.dm2 = dm2
-        cat.vis_tau1_charge = vis_tau1.charge
-        cat.vis_tau2_charge = vis_tau2.charge
-        cat.has_jet_pair = has_jet_pair
-        cat.has_fatjet = has_fatjet
-
-        # optionally update features
-        cont, cat = self.update_features(cont, cat, events[event_mask], phi_lep)
-
-        # build continuous inputs
-        # (order exactly as documented in link above)
-        continuous_inputs = [
-            np.asarray(t[..., None], dtype=np.float32)
-            for t in cont.values()
-            if t is not None
-        ]
-
-        # build categorical inputs
-        # (order exactly as documented in link above)
-        categorical_inputs = [
-            np.asarray(t[..., None], dtype=np.int32)
-            for t in cat.values()
-            if t is not None
-        ]
-        # evaluate the model
-        scores = self.evaluator(
-            self.cls_name,
-            np.concatenate(categorical_inputs, axis=1),
-            np.concatenate(continuous_inputs, axis=1),
+    def define_event_mask(self, events: ak.Array, cat: DotDict, cont: DotDict) -> ak.Array:
+        return (
+            np.isin(cat.pair_type, self.embedding_expected_inputs["pair_type"]) &
+            np.isin(cat.dm1, self.embedding_expected_inputs["decay_mode1"]) &
+            np.isin(cat.dm2, self.embedding_expected_inputs["decay_mode2"]) &
+            np.isin(cat.vis_tau1_charge, self.embedding_expected_inputs["charge1"]) &
+            np.isin(cat.vis_tau2_charge, self.embedding_expected_inputs["charge2"]) &
+            ((cat.has_jet_pair == 1) | (cat.has_fatjet == 1))
         )
 
-        # sanitize scores (probably replacing nans)
-        scores = self.sanitize_scores(scores)
+    def aggregate_ensemble_output(self, scores: np.ndarray) -> np.ndarray:
+        if self.ensemble_aggregation == "mean":
+            return np.mean(scores, axis=1)
 
-        # store scores in events
-        events = self.store_scores(events, scores, event_mask)
+        if not self.ensemble_aggregation:
+            return scores
 
-        if self.produce_features:
-            # store input columns for sync
-            for name, vals in cont.items():
-                values = self.empty_value * np.ones(len(events), dtype=np.float32)
-                values[event_mask] = ak.flatten(np.asarray(vals[..., None], dtype=np.float32))
-                events = set_ak_column_f32(events, f"{self.features_prefix}{self.cls_name}_{name}", values)
-            for name, vals in cat.items():
-                values = int(self.empty_value) * np.ones(len(events), dtype=np.int32)
-                values[event_mask] = ak.flatten(np.asarray(vals[..., None], dtype=np.int32))
-                events = set_ak_column_i32(events, f"{self.features_prefix}{self.cls_name}_{name}", values)
+        raise ValueError(f"invalid ensemble aggregation method: {self.ensemble_aggregation}")
 
-        return events
-
-    def update_features(self, cont, cat, events, phi_lep):
-        return cont, cat
-
-    def sanitize_scores(self, scores: Any) -> Any:
+    def validate_scores(self, scores: np.ndarray) -> np.ndarray:
         # in very rare cases (1 in 25k), the network output can be none, likely for numerical reasons,
         # so issue a warning and set them to a default value
         nan_mask = ~np.isfinite(scores)
         if np.any(nan_mask):
-            logger.warning(
-                f"{nan_mask.sum() // scores.shape[1]} out of {scores.shape[0]} events have NaN scores; "
-                f"setting them to {self.empty_value}",
-            )
+            nan_mask_event = nan_mask.any(axis=1)
+            msg = f"{nan_mask_event.sum()} / {len(scores)} events ({100 * nan_mask_event.mean():.2f}%) have NaN scores"
+            # raise when this happens too often
+            if nan_mask_event.mean() >= 0.005:
+                raise Exception(f"{msg}; this should not happen, so please debug")
+            # raise when only some columns in events are nan, but not all
+            uneven_nan_mask = nan_mask_event & ~nan_mask.all(axis=1)
+            if uneven_nan_mask.any():
+                raise Exception(
+                    f"{msg}, of which {uneven_nan_mask.sum()} only have them in some output nodes; this should not "
+                    "happen, so please debug",
+                )
+            # warn for the remainder of cases
+            logger.warning(f"{msg}; setting them to {self.empty_value}")
             scores[nan_mask] = self.empty_value
 
         return scores
@@ -419,12 +444,10 @@ class _external_dnn(Producer):
 
         return events
 
-    def update_event_mask(self, events: ak.Array, event_mask: ak.Array) -> ak.Array:
-        return event_mask
-
 
 class torch_test_dnn(_external_dnn):
     exposed = True
+
 
 class torch_simple_kl01(_external_dnn):
     exposed = True
@@ -439,7 +462,7 @@ class _e2e_dnn(_external_dnn):
     latent_dim = 50
 
     def init_func(self, **kwargs) -> None:
-        super(_e2e_dnn, self).init_func(**kwargs)
+        super().init_func(**kwargs)
 
         # store names of output columns for latent scores
         self.latent_output_columns = [
@@ -448,11 +471,11 @@ class _e2e_dnn(_external_dnn):
         ]
         self.produces |= set(self.latent_output_columns)
 
-    def sanitize_scores(self, scores: Any) -> Any:
+    def validate_scores(self, scores: Any) -> Any:
         # scores is a tuple of two arrays of scores that have no softmax applied yet, so apply it first, then perform
         # the usual checks
         return type(scores)(
-            super(_e2e_dnn, self).sanitize_scores(scipy.special.softmax(_scores, axis=1))
+            super(_e2e_dnn, self).validate_scores(scipy.special.softmax(_scores, axis=1))
             for _scores in scores
         )
 
@@ -475,6 +498,10 @@ class _e2e_dnn(_external_dnn):
             events = set_ak_column_f32(events, column, values)
 
         return events
+
+
+class e2e_model1(_e2e_dnn):
+    exposed = True
 
 
 class e2e_model1(_e2e_dnn):
@@ -704,7 +731,7 @@ class has_neutrinos(_external_dnn):
             for comp in ('px','py','pz'):
                 cont[f'nu{num}_{comp}'] = events[f'reg_dnn_moe_nu{num}_{comp}']
         return cont, cat
-    
+
 class subdivided_signal(_external_dnn):
     def set_output_columns(self):
         self.output_columns = [
@@ -719,7 +746,7 @@ class subdivided_signal(_external_dnn):
         # if the signal class is subdivided, sum them into one hh class
         # this assumes that classes are ordered as: dy, tt, kl0, kl1,...
         scores[:, 2] = scores[:, 2:].sum(axis=1)
-        
+
         for i, column in enumerate(self.output_columns):
             values = self.empty_value * np.ones(len(events), dtype=np.float32)
             values[event_mask] = scores[:, i]

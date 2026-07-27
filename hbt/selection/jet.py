@@ -6,8 +6,8 @@ Jet selection methods.
 
 from __future__ import annotations
 
-from operator import or_
-from functools import reduce
+import operator
+import functools
 
 import law
 
@@ -347,13 +347,12 @@ def jet_selection(
     # two strategies were studied a) and b) but strategy a) seems to not comply with how trigger
     # matching should be done and should therefore be ignored.
 
-    false_mask = full_like(events.event, False, dtype=bool)
-
     # create mask for tautau events that fired and matched tautau trigger
+    false_mask = full_like(events.event, False, dtype=bool)[:, None]
     tt_match_mask = (
         (events.channel_id == ch_tautau.id) &
-        ak.any(reduce(
-            or_,
+        ak.any(functools.reduce(
+            operator.or_,
             [(events.matched_trigger_ids == tid) for tid in self.trigger_ids_tt],
             false_mask,
         ), axis=1)
@@ -363,8 +362,8 @@ def jet_selection(
     # and passed the tautau matching in the lepton selection
     ttj_mask = (
         (events.channel_id == ch_tautau.id) &
-        ak.any(reduce(
-            or_,
+        ak.any(functools.reduce(
+            operator.or_,
             [(lepton_results.x.lepton_part_trigger_ids == tid) for tid in self.trigger_ids_ttj],
             false_mask,
         ), axis=1)
@@ -381,12 +380,13 @@ def jet_selection(
 
     all_vbf_quadjet_trigger = all_vbf_trigger + self.trigger_ids_quadjet
 
-    vbf_quadjet_lep_trigger_mask = (
-        ak.any(reduce(
-            or_,
+    vbf_quadjet_lep_trigger_mask = ak.any(
+        functools.reduce(
+            operator.or_,
             [(lepton_results.x.lepton_part_trigger_ids == tid) for tid in all_vbf_quadjet_trigger],
             false_mask,
-        ), axis=1)
+        ),
+        axis=1,
     )
 
     # we want to remove tautau events for which after trigger and tau tau matching, only ttj/v
@@ -660,6 +660,7 @@ def jet_selection(
                 if trigger.has_tag(tag):
                     return tag
             return None
+
         trigger_data_with_tags = [
             (trigger, trigger_fired, leg_masks, add_priority_tag(trigger))
             for trigger, trigger_fired, leg_masks in trigger_results.x.trigger_data
@@ -795,6 +796,9 @@ def jet_selection(
                     orthogonalization_mask = orthogonalization_mask | passed_base_selection[name]
 
                 # update the dictionary of passed base selection
+                # Note: could add channel check -> vbf ditau cannot remove events from etau for example
+                # for now, already done through lepton selection, so included
+                # in partially_passed_base_selection
                 passed_base_selection[priority_tag] = (
                     partially_passed_base_selection[priority_tag] &
                     trig_req_mask &
@@ -859,8 +863,8 @@ def jet_selection(
             if trigger.has_tag({"single_e", "single_mu", "cross_e_tau", "cross_mu_tau", "cross_tau_tau"})
         ]
         lep_trigger_matched_mask = (
-            ak.any(reduce(
-                or_,
+            ak.any(functools.reduce(
+                operator.or_,
                 [(events.matched_trigger_ids == tid) for tid in lep_tid],
                 false_mask,
             ), axis=1)
@@ -952,7 +956,6 @@ def jet_selection(
             # the btag weight normalization requires a selection with everything but the bjet
             # selection, so add this step here
             # note: there is currently no b-tag discriminant cut at this point, so skip it
-            # "bjet_deepjet": jet_sel,
             # "bjet_pnet": jet_sel,  # no need in run 2
         },
         objects={
@@ -979,7 +982,9 @@ def jet_selection(
 
 @jet_selection.init
 def jet_selection_init(self: Selector, **kwargs) -> None:
-    # register shifts
+    super(jet_selection, self).init_func(**kwargs)
+
+    # register all jec/jer shifts
     self.shifts |= {
         shift_inst.name
         for shift_inst in self.config_inst.shifts
@@ -989,6 +994,8 @@ def jet_selection_init(self: Selector, **kwargs) -> None:
 
 @jet_selection.setup
 def jet_selection_setup(self: Selector, task: law.Task, **kwargs) -> None:
+    super(jet_selection, self).setup_func(task=task, **kwargs)
+
     # store ids of tau-tau cross triggers
     self.trigger_ids_tt = [
         trigger.id for trigger in self.config_inst.x.triggers

@@ -14,7 +14,7 @@ from columnflow.columnar_util import EMPTY_FLOAT, Route, attach_coffea_behavior
 from columnflow.util import maybe_import
 from columnflow.types import Sequence, Callable, Type, Any
 
-from hbt.util import create_lvector_xyz, stack_lvectors, rotate_px_py, delta_r12, with_type
+from hbt.util import create_lvector_xyz, stack_lvectors, rotate_px_py, delta_r12, with_type, logit
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -40,23 +40,26 @@ def add_variables(config: od.Config) -> None:
     add_variable(
         name="event",
         expression="event",
-        binning=(1, 0.0, 1.0e9),
+        binning=(100, 0.0, 1.0e9),
         x_title="Event number",
-        discrete_x=True,
     )
     add_variable(
         name="run",
         expression="run",
-        binning=(1, 100000.0, 500000.0),
+        binning=(100, 100000.0, 500000.0),
         x_title="Run number",
-        discrete_x=True,
     )
     add_variable(
         name="lumi",
         expression="luminosityBlock",
-        binning=(1, 0.0, 5000.0),
+        binning=(100, 0.0, 5000.0),
         x_title="Luminosity block",
-        discrete_x=True,
+    )
+    add_variable(
+        name="npvs",
+        expression="PV.npvs",
+        binning=(50, 0.0, 100.0),
+        x_title="N PVs",
     )
     add_variable(
         name="ht",
@@ -251,22 +254,28 @@ def add_variables(config: od.Config) -> None:
         x_title="Normalized pileup weight",
     )
     add_variable(
-        name="btag_weight",
-        expression="btag_weight",
+        name="btag_weights_pnet",
+        expression="btag_weights_pnet",
         binning=(60, 0, 3),
-        x_title="b-tag weight",
+        x_title="b-tag weight (PNet)",
     )
     add_variable(
-        name="normalized_btag_weight",
+        name="normalized_btag_weight_pnet",
         expression="normalized_btag_weight",
         binning=(60, 0, 3),
-        x_title="Normalized b-tag weight",
+        x_title="Normalized b-tag weight (PNet)",
     )
     add_variable(
-        name="normalized_njet_btag_weight",
-        expression="normalized_njet_btag_weight",
+        name="normalized_njet_btag_weight_pnet",
+        expression="normalized_njet_btag_weight_pnet",
         binning=(60, 0, 3),
-        x_title="$N_{jet}$ normalized b-tag weight",
+        x_title="$N_{jet}$ normalized b-tag weight (PNet)",
+    )
+    add_variable(
+        name="btag_weights_upart",
+        expression="btag_weights_upart",
+        binning=(60, 0, 3),
+        x_title="b-tag weight (UParT)",
     )
 
     # cutflow variables
@@ -723,13 +732,6 @@ def add_variables(config: od.Config) -> None:
         x_title=r"Subleading muon $\phi$",
     )
 
-    # helper for logit-conversion of (e.g.) dnn outputs into a less-compressed target space
-    def logit(events: ak.Array, col: str, eps: float = 1e-6) -> ak.Array | np.ndarray:
-        # eps confines the range of the transformed values to approx. [-13.8, 13.8] for x in [0, 1]
-        import numpy as np
-        x = events[col]
-        return np.log((x + eps) / (1 - x + eps))
-
     # DNN outputs
     for proc in ["hh", "tt", "dy"]:
         # outputs of the resonant pDNN at SM-like mass and spin values
@@ -775,7 +777,6 @@ def add_variables(config: od.Config) -> None:
             expression=f"run3_dnn_simple_{proc}",
             binning=(25, 0.0, 1.0),
             x_title=rf"DNN {proc.upper()} output",
-            aux={"x_transformations": "equal_distance_with_indices"},
         )
 
         add_variable(
@@ -1338,6 +1339,8 @@ class VarDiHHBJet(VarExp):
         events = attach_coffea_behavior(events, {"HHBJet": "Jet"})
         hhbjets = events.HHBJet[:, :2]
 
+        if attr == "raw":
+            return hhbjets
         if attr == "dr":
             return delta_r12(hhbjets)
 
@@ -1368,6 +1371,8 @@ class VarDiLepVis(VarExp):
     def __call__(self, events: ak.Array, attr: str | None = None) -> ak.Array:
         leps = stack_lvectors([events.Electron, events.Muon, events.Tau])[..., :2]
 
+        if attr == "raw":
+            return leps
         if attr == "dr":
             return delta_r12(leps)
 
@@ -1413,6 +1418,12 @@ class VarDiLepReg(VarExp):
         if attr == "nus":
             return nu1, nu2
 
+        if attr == "dr":
+            lepsvis = self.dilepvis(events, attr="raw")
+            l1_reg = stack_lvectors([nu1, lepsvis[:, 0]]).sum(axis=-1)
+            l2_reg = stack_lvectors([nu2, lepsvis[:, 1]]).sum(axis=-1)
+            return delta_r12(stack_lvectors([l1_reg, l2_reg]))
+
         # build the full system
         dilepreg = stack_lvectors([nu1, nu2, dilepvis]).sum(axis=-1)
 
@@ -1454,6 +1465,8 @@ class VarHHVis(VarExp):
         dilepvis = self.dilepvis(events)
         hs = stack_lvectors([dihhbjet, dilepvis])
 
+        if attr == "raw":
+            return hs
         if attr == "dr":
             return delta_r12(hs)
 
@@ -1486,6 +1499,8 @@ class VarHHReg(VarExp):
         dilepreg = self.dilepreg(events)
         hs = stack_lvectors([dihhbjet, dilepreg])
 
+        if attr == "raw":
+            return hs
         if attr == "dr":
             return delta_r12(hs)
 
@@ -1517,6 +1532,8 @@ class VarHHGen(VarExp):
         assert ak.all(ak.num(events.gen_higgs.h, axis=-1) == 2)
         hh = with_type("LorentzVector", events.gen_higgs.h)
 
+        if attr == "raw":
+            return hh
         if attr == "dr":
             return delta_r12(hh)
 

@@ -86,9 +86,11 @@ def vbfjtag(
     # additional features for v2 network
     if self.vbfjtag_version == "v2":
         # centrality
-        eta_min, eta_max = ak.min(jets.eta, axis=1), ak.max(jets.eta, axis=1)
+        eta_min = ak.min(jets.eta, axis=1)
+        eta_max = ak.max(jets.eta, axis=1)
         eta_c = (eta_min + eta_max) * 0.5
-        centrality = 1.0 - 2 * abs(jets.eta - eta_c) / (eta_max - eta_min)
+        eta_d = eta_max - eta_min
+        centrality = 1.0 - 2 * abs(jets.eta - eta_c) / ak.where(eta_d == 0, 1e-5, eta_d)
 
         # isolation
         dr = jets.metric_table(jets)
@@ -217,6 +219,8 @@ def vbfjtag(
 
 @vbfjtag.init
 def vbfjtag_init(self: Producer, **kwargs) -> None:
+    super(vbfjtag, self).init_func(**kwargs)
+
     # define btag column to be read and used
     self.btag_col = self.config_inst.x.btag_default.jet_column
     self.uses.add(f"Jet.{self.btag_col}")
@@ -231,11 +235,11 @@ def vbfjtag_requires(self: Producer, task: law.Task, reqs: dict, **kwargs) -> No
     """
     Add the external files bundle to requirements.
     """
-    if "external_files" in reqs:
-        return
+    super(vbfjtag, self).requires_func(task=task, reqs=reqs, **kwargs)
 
-    from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(task)
+    if "external_files" not in reqs:
+        from columnflow.tasks.external import BundleExternalFiles
+        reqs["external_files"] = BundleExternalFiles.req(task)
 
 
 @vbfjtag.setup
@@ -248,6 +252,8 @@ def vbfjtag_setup(
     """
     Sets up the two VBFjTag TF models.
     """
+    super(vbfjtag, self).setup_func(task=task, reqs=reqs, **kwargs)
+
     from hbt.ml.evaluators import TFEvaluator
 
     if not getattr(task, "taf_tf_evaluator", None):
@@ -305,6 +311,8 @@ def vbfjtag_teardown(self: Producer, task: law.Task, **kwargs) -> None:
     """
     Stops the TF evaluator.
     """
+    super(vbfjtag, self).teardown_func(task=task, **kwargs)
+
     if (evaluator := getattr(task, "taf_tf_evaluator", None)):
         evaluator.stop()
     task.taf_tf_evaluator = None

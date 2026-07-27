@@ -12,7 +12,7 @@ import law
 import order as od
 
 from columnflow.config_util import (
-    add_category, create_category_combinations, CategoryGroup, track_category_changes, CategoryIDCache,
+    add_category, create_category_combinations, CategoryGroup, CategoryIDCache,
 )
 from columnflow.types import Any
 
@@ -126,6 +126,7 @@ def add_categories(config: od.Config) -> None:
             [
                 "incl", "res1b", "res2b", "boosted", "res1b_novbf", "res2b_novbf", "boosted_novbf",
                 "res1b_cc", "res2b_cc", "vbf_cc", "boosted_cc", "res1b_inclvbf_cc", "res2b_inclvbf_cc",
+                "eq1b", "eq2b", "ge2b",
             ],
             is_complete=True,
             has_overlap=True,
@@ -190,5 +191,4 @@ def add_categories(config: od.Config) -> None:
         ],
     )
 
-    track_category_changes(config)
     id_cache.close()

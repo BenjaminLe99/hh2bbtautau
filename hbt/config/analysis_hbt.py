@@ -98,7 +98,7 @@ def add_lazy_config(
             mod = importlib.import_module(campaign_module)
             campaign = getattr(mod, campaign_attr)
 
-            return add_config(
+            config = add_config(
                 analysis_hbt,
                 campaign.copy(),
                 config_name=config_name + config_name_postfix,
@@ -106,6 +106,8 @@ def add_lazy_config(
                 limit_dataset_files=limit_dataset_files,
                 **kwargs,
             )
+            config.analysis = analysis_hbt
+            return config
         return factory
 
     analysis_hbt.configs.add_lazy_factory(config_name, create_factory(config_id))
@@ -151,7 +153,26 @@ add_lazy_config(
     campaign_attr="campaign_run3_2024_nano_local_v15",
     config_name="24_v15",
     config_id=9015,
+    split_2024_mc=False,
 )
+
+# 2025
+# add_lazy_config(
+#     campaign_module="cmsdb.campaigns.run3_2025_nano_v15",
+#     campaign_attr="campaign_run3_2025_nano_local_v15",
+#     config_name="25_v15",
+#     config_id=10015,
+#     split_2024_mc=True,
+# )
+
+# 2026
+# add_lazy_config(
+#     campaign_module="cmsdb.campaigns.run3_2026_nano_v15",
+#     campaign_attr="campaign_run3_2026_nano_local_v15",
+#     config_name="26_v15",
+#     config_id=11015,
+#     split_2024_mc=True,
+# )
 
 #
 # sync configs

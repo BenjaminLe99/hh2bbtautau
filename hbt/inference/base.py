@@ -58,7 +58,7 @@ class HBTInferenceModelBase(InferenceModel):
         # gather campaign identifier keys per config
         self.single_config = len(self.config_insts) == 1
         for config_inst in self.config_insts:
-            assert config_inst.campaign.x.year in {2022, 2023}
+            assert config_inst.campaign.x.year in {2022, 2023, 2024}
             self.campaign_keys[config_inst] = f"{config_inst.campaign.x.year}{config_inst.campaign.x.postfix}"
 
         # overall campaign key
@@ -195,9 +195,9 @@ class HBTInferenceModel(HBTInferenceModelBase):
                 if not is_dynamic:
                     dataset_names = [dataset.name for dataset in get_all_datasets_from_process(config_inst, proc_name)]
                     if not dataset_names:
-                        logger.debug(
-                            f"skipping process {proc_name} in inference model {self.cls_name}, no matching datasets "
-                            f"found in config {config_inst.name}",
+                        logger.warning(
+                            f"skipping process {proc_name} in inference model '{self.cls_name}', no matching datasets "
+                            f"found in config '{config_inst.name}'",
                         )
                         continue
 
@@ -225,10 +225,13 @@ class HBTInferenceModel(HBTInferenceModelBase):
         # helper to inject era info into combine process names
         campaign_key = self.campaign_keys[config_inst]
         # for HH, inject the key before the ecm value
-        if (m := re.match(r"^((ggHH|qqHH)_.+_13p(0|6)TeV)_(hbbhtt)$", combine_name)):
+        if (m := re.match(r"^((ggHH|qqHH)_.+_13p(0|6)TeV)_(hbbhtt|hbbhww)$", combine_name)):
             return f"{m.group(1)}_{campaign_key}_{m.group(4)}"
         # for single H, inject the key before the higgs decay
         if (m := re.match(r"^(.+)_(hbb|htt)$", combine_name)):
+            return f"{m.group(1)}_{campaign_key}_{m.group(2)}"
+        # for data driven backgrounds, insert the key before the datadriven flag
+        if (m := re.match(r"^(.+)_(datadriven)$", combine_name)):
             return f"{m.group(1)}_{campaign_key}_{m.group(2)}"
         # for all other processes, just append the campaign key
         return f"{combine_name}_{campaign_key}"
@@ -246,19 +249,25 @@ class HBTInferenceModel(HBTInferenceModelBase):
         *,
         processes: str | list[str] | None = None,
         configs: od.Config | list[od.Config] | None = None,
-        skip_qcd: bool = False,
+        skip_datadriven: bool = False,
     ) -> list[str] | None:
-        # helper to create process patterns to match specific rules
         patterns = []
-        # build a single regexp that matches processes and configs
-        name_parts = []
-        if processes:
-            name_parts.append(law.util.make_list(processes))
-        if configs:
-            name_parts.append([self.campaign_keys[c] for c in law.util.make_list(configs)])
-        if name_parts:
-            re_parts = [f"({'|'.join(n)})" for n in name_parts]
-            patterns.append(rf"^.*{'.*'.join(re_parts)}.*$")
-        if skip_qcd:
-            patterns.append("!QCD*")
+
+        # build a single regexp that matches the OR between all given process and config combinations
+        or_ = lambda s: "(" + "|".join(map(str, law.util.make_unique(s))) + ")"
+        config_keys = [self.campaign_keys[c] for c in law.util.make_list(configs)] if configs else None
+        regexp = ""
+        if processes and configs:
+            regexp = rf"^{or_(processes)}_{or_(config_keys)}($|_.+$)"
+        elif processes:
+            regexp = rf"^{or_(processes)}($|_.+$)"
+        elif configs:
+            regexp = rf"^.+_{or_(config_keys)}($|_.+$)"
+        if regexp:
+            patterns.append(regexp)
+
+        # datadriven proceses with negated fnmatch pattern
+        if skip_datadriven:
+            patterns.append("!*_datadriven")
+
         return patterns or None
