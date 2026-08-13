@@ -13,8 +13,9 @@ import collections
 import law
 import order as od
 
-from columnflow.inference import ParameterType  # , ParameterTransformation
-from columnflow.util import DotDict
+from columnflow.inference import ParameterType  # ParameterTransformations
+from columnflow.util import DotDict, pattern_matcher
+from columnflow.types import Sequence
 
 from hbt.inference.base import HBTInferenceModel
 
@@ -33,7 +34,7 @@ class default(HBTInferenceModel):
 
     # whether this model is used across run 3 campaigns or if it is meant for a single campaign only
     # (e.g. this influences the lumi uncertainty treatment)
-    run3_multi_campaign = True
+    multi_campaign = True
 
     # whether to include bbvv as an additional signal process
     add_bbvv = True
@@ -88,24 +89,24 @@ class default(HBTInferenceModel):
                 for d, d_comb in hh_nonbb_decays
             },
             "ttbar": "tt",
-            # "ttbarV": "ttv",
-            # "ttbarVV": "ttvv",
-            # "singlet": "st",
-            # "DY": "dy",
-            # # "EWK": "z",  # currently not used
-            # "W": "w",
-            # "VV": "vv",
-            # "VVV": "vvv",
-            # "WH_13p6TeV_hbb": "wh_hbb",
-            # "WH_13p6TeV_htt": "wh_htt",
-            # "ZH_13p6TeV_hbb": "zh_hbb",
-            # "ZH_13p6TeV_htt": "zh_htt",
-            # "ggH_13p6TeV_hbb": "h_ggf_hbb",
-            # "ggH_13p6TeV_htt": "h_ggf_htt",
-            # "qqH_13p6TeV_hbb": "h_vbf_hbb",
-            # "qqH_13p6TeV_htt": "h_vbf_htt",
-            # "ttH_13p6TeV_hbb": "tth_hbb",
-            # "ttH_13p6TeV_htt": "tth_hnonbb",
+            "ttbarV": "ttv",
+            "ttbarVV": "ttvv",
+            "singlet": "st",
+            "DY": "dy",
+            "W": "w_lnu",
+            "EWK": "ewk",
+            "VV": "vv",
+            "VVV": "vvv",
+            "WH_13p6TeV_hbb": "wh_hbb",
+            "WH_13p6TeV_htt": "wh_htt",
+            "ZH_13p6TeV_hbb": "zh_hbb",
+            "ZH_13p6TeV_htt": "zh_htt",
+            "ggH_13p6TeV_hbb": "h_ggf_hbb",
+            "ggH_13p6TeV_htt": "h_ggf_htt",
+            "qqH_13p6TeV_hbb": "h_vbf_hbb",
+            "qqH_13p6TeV_htt": "h_vbf_htt",
+            "ttH_13p6TeV_hbb": "tth_hbb",
+            "ttH_13p6TeV_htt": "tth_hnonbb",
         }
 
         if self.add_qcd:
@@ -378,10 +379,10 @@ class default(HBTInferenceModel):
         for config_inst in self.config_insts:
             lumi = config_inst.x.luminosity
             for unc_name in lumi.uncertainties:
-                # depending on the run3_multi_campaign setting, either the single, year specific uncertainty is used,
+                # depending on the multi_campaign setting, either the single, year specific uncertainty is used,
                 # or the correlated uncertainty scheme across all campaigns is used
                 is_year_specific = str(config_inst.campaign.x.year) in unc_name
-                if self.run3_multi_campaign == is_year_specific:
+                if self.multi_campaign == is_year_specific:
                     continue
                 # add it
                 self.add_parameter(
@@ -643,21 +644,27 @@ class default(HBTInferenceModel):
 
 
 # helper to remove all parameters that require shifted inputs from a model instance
-def remove_shift_parameters(model: default) -> None:
-    # remove all parameters that require a shift source other than nominal
+def remove_shift_parameters(model: default, keep: str | Sequence[str] | None = None) -> None:
+    keep_fn = pattern_matcher(keep) if keep else (lambda name: False)
+
+    # remove all parameters that require a shift source other than nominal and that are not kept
     for category_name, process_name, parameter in model.iter_parameters():
-        remove = (
-            (parameter.type.is_shape and not parameter.transformations.any_from_rate) or
-            (parameter.type.is_rate and parameter.transformations.any_from_shape)
-        )
-        if remove:
+        needs_shift = parameter.type.is_shape
+        if needs_shift and not keep_fn(parameter.name):
             model.remove_parameter(parameter.name, process=process_name, category=category_name)
 
 
 @default.inference_model
-def default_no_shifts(self):
+def default_no_shifts(self) -> None:
     super(default_no_shifts, self).init_func()
     remove_shift_parameters(self)
+    self.init_cleanup()
+
+
+@default.inference_model
+def default_shape_test(self) -> None:
+    super(default_shape_test, self).init_func()
+    remove_shift_parameters(self, keep="CMS_btag_lf")
     self.init_cleanup()
 
 
@@ -691,7 +698,7 @@ default_no_shifts_simple_5k = default_no_shifts.derive(
 
 
 @default.inference_model(variable="run3_dnn_moe_hh_fine_5k", empty_bin_value=0)
-def default_bin_opt(self):
+def default_bin_opt(self) -> None:
     # set everything up as in the default model
     super(default_bin_opt, self).init_func()
 
@@ -717,7 +724,7 @@ def default_bin_opt(self):
 
     # repeat the cleanup
     self.init_cleanup()
-    
+
 torch_test_no_shifts = default_no_shifts.derive(
     "torch_test_no_shifts",
     cls_dict={"variable": "torch_test_dnn_hh_fine"},
@@ -1395,7 +1402,7 @@ class default_cc(default):
 
 
 @default_cc.inference_model
-def default_cc_no_shifts(self):
+def default_cc_no_shifts(self) -> None:
     super(default_cc_no_shifts, self).init_func()
     remove_shift_parameters(self)
     self.init_cleanup()
@@ -1409,4 +1416,14 @@ default_cc_logit_no_shifts = default_cc_no_shifts.derive(
 default_cc_no_vbf_no_shifts = default_cc_no_shifts.derive(
     "default_cc_no_vbf_no_shifts",
     cls_dict={"phasespaces": ["res1b_inclvbf_cc", "res2b_inclvbf_cc", "boosted_cc"]},
+)
+
+default_bmult_no_shifts = default_no_shifts.derive(
+    "default_bmult_no_shifts",
+    cls_dict={"phasespaces": ["eq1b", "ge2b"]},
+)
+
+default_bmult2_no_shifts = default_no_shifts.derive(
+    "default_bmult2_no_shifts",
+    cls_dict={"phasespaces": ["eq1b", "eq2b", "ge3b"]},
 )

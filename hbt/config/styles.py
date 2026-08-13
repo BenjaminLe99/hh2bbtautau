@@ -65,6 +65,12 @@ def setup_plot_styles(config: od.Config) -> None:
         "xy": (0.035, 0.750),
     }
 
+    # extended y-range on ratio pad
+    extended_ratio = {
+        **ratio,
+        "ylim": (0.42, 1.58),
+    }
+
     # construct named style configs
     config.x.custom_style_config_groups = {
         "default": (default_cfg := {
@@ -82,6 +88,9 @@ def setup_plot_styles(config: od.Config) -> None:
             **wide_legend_cfg,
             "legend_cfg": wide_ext_legend,
             "annotate_cfg": annotate_wide_ext,
+        },
+        "ext_ratio": {
+            "rax_cfg": extended_ratio,
         },
     }
 
@@ -180,18 +189,18 @@ def stylize_processes(config: od.Config) -> None:
     if (p := config.get_process("multiboson", default=None)):
         p.color1 = cfg.x.colors.grey
 
-    if (p := config.get_process("w", default=None)):
-        p.color1 = cfg.x.colors.olive
-        p.label = "W"
+    if (p := config.get_process("others", default=None)):
+        p.color1 = cfg.x.colors.grey
+
+    if (p := config.get_process("w_lnu", default=None)):
+        p.color1 = cfg.x.colors.orange
+        p.label = "W + Jets"
 
     if (p := config.get_process("z", default=None)):
         p.color1 = cfg.x.colors.olive
         p.label = "Z"
 
     if (p := config.get_process("v", default=None)):
-        p.color1 = cfg.x.colors.orange
-
-    if (p := config.get_process("all_v", default=None)):
         p.color1 = cfg.x.colors.orange
 
     if (p := config.get_process("ewk", default=None)):
@@ -204,9 +213,6 @@ def stylize_processes(config: od.Config) -> None:
     if (p := config.get_process("ttvv", default=None)):
         p.color1 = cfg.x.colors.brown
         p.label = r"$t\bar{t} + VV$"
-
-    if (p := config.get_process("tt_multiboson", default=None)):
-        p.color1 = cfg.x.colors.brown
 
     if (p := config.get_process("qcd", default=None)):
         p.color1 = cfg.x.colors.red

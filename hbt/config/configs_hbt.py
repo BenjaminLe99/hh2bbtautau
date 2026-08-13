@@ -17,15 +17,18 @@ import order as od
 from scinum import Number
 
 from columnflow.tasks.external import ExternalFile as Ext
-from columnflow.util import DotDict, dev_sandbox
+from columnflow.util import DotDict, dev_sandbox, maybe_import
 from columnflow.config_util import (
     get_root_processes_from_campaign, add_shift_aliases, get_shifts_from_sources, verify_config_processes,
 )
 from columnflow.columnar_util import ColumnCollection, skip_column
 from columnflow.cms_util import CATInfo, CATSnapshot, CMSDatasetInfo
-from columnflow.types import Any, Callable
+from columnflow.types import Callable
 
 from hbt import env_is_cern, force_desy_resources
+
+np = maybe_import("numpy")
+ak = maybe_import("awkward")
 
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
@@ -127,31 +130,27 @@ def add_config(
     ################################################################################################
 
     # add custom processes
-    if not sync_mode:
-        procs.add(
-            name="v",
-            id=7997,
-            label="W/Z",
-            processes=[procs.n.w, procs.n.z],
-        )
-        procs.add(
-            name="multiboson",
-            id=7998,
-            label="Multiboson",
-            processes=[procs.n.vv, procs.n.vvv],
-        )
-        procs.add(
-            name="all_v",
-            id=7996,
-            label="Multiboson",
-            processes=[procs.n.v, procs.n.multiboson],
-        )
-        procs.add(
-            name="tt_multiboson",
-            id=7999,
-            label=r"$t\bar{t}$ + Multiboson",
-            processes=[procs.n.ttv, procs.n.ttvv],
-        )
+    procs.add(
+        name="multiboson",
+        id=7996,
+        label="Multiboson",
+        processes=[procs.n.vv, procs.n.vvv, procs.n.ttv, procs.n.ttvv],
+    )
+
+    procs.add(
+        name="ewk",
+        id=7997,
+        label="EWK",
+        processes=[procs.n.w_vbf, procs.n.z_vbf],
+    )
+
+    # TODO: need better labelling
+    procs.add(
+        name="others",
+        id=7998,
+        label="Others",
+        processes=[procs.n.multiboson, procs.n.ewk],
+    )
 
     cfg.x.hh_points = DotDict.wrap({
         "ggf_keys": ["kl"],
@@ -182,10 +181,11 @@ def add_config(
     process_names = [
         "data",
         "tt",
-        "st",
         "dy",
-        "tt_multiboson",
-        "all_v",
+        "st",
+        "w_lnu",
+        "multiboson",
+        "ewk",
         "qcd",
         "h",
         "hh_ggf_hbb_htt",
@@ -319,11 +319,12 @@ def add_config(
         "dy_tautau_m50toinf_2j_amcatnlo",
 
         # additionally filtered datasets for 2022/2023 disabled for now
-        # *if_not_era(year=2024, values=[
-        #     "dy_tautau_m50toinf_0j_filtered_amcatnlo",
-        #     "dy_tautau_m50toinf_1j_filtered_amcatnlo",
-        #     "dy_tautau_m50toinf_2j_filtered_amcatnlo",
-        # ]),
+        # 2024 status not ready: https://cms-pdmv-prod.web.cern.ch/grasp/samples?dataset_query=*DYto2Tau*&campaign=RunIII2024Summer24*GS # noqa: E501
+        *if_not_era(year=2024, values=[
+            "dy_tautau_m50toinf_0j_filtered_amcatnlo",
+            "dy_tautau_m50toinf_1j_filtered_amcatnlo",
+            "dy_tautau_m50toinf_2j_filtered_amcatnlo",
+        ]),
 
         # dy, powheg
         # *if_era(year=2022, values=["dy_ee_m50toinf_powheg"]),  # 50toinf only available in 2022, requires stitching
@@ -378,16 +379,20 @@ def add_config(
         "w_lnu_2j_pt600toinf_amcatnlo",
 
         # z + jets (not DY but qq)
-        # decided to drop z_qq for now as their contribution is negligible,
-        # but we should check that again at a much later stage
-        # "z_qq_1j_pt100to200_amcatnlo",
-        # "z_qq_1j_pt200to400_amcatnlo",
-        # "z_qq_1j_pt400to600_amcatnlo",
-        # "z_qq_1j_pt600toinf_amcatnlo",
-        # "z_qq_2j_pt100to200_amcatnlo",
-        # "z_qq_2j_pt200to400_amcatnlo",
-        # "z_qq_2j_pt400to600_amcatnlo",
-        # "z_qq_2j_pt600toinf_amcatnlo",
+        # currently dropped since the yield after default selection is <0.1% of (e.g.) VV, which is already small
+        # *if_not_era(year=2024, values=[
+        #     "z_qq_1j_pt100to200_amcatnlo",
+        #     "z_qq_1j_pt200to400_amcatnlo",
+        #     "z_qq_1j_pt400to600_amcatnlo",
+        #     "z_qq_1j_pt600toinf_amcatnlo",
+        #     "z_qq_2j_pt100to200_amcatnlo",
+        #     "z_qq_2j_pt200to400_amcatnlo",
+        #     "z_qq_2j_pt400to600_amcatnlo",
+        #     "z_qq_2j_pt600toinf_amcatnlo",
+        # ]),
+        # *if_era(year=2024, values=[
+        #     "z_qq_pt100toinf_amcatnlo",
+        # ]),
 
         # vbf w/z production
         "w_vbf_wlnu_madgraph",
@@ -479,7 +484,7 @@ def add_config(
             elif dataset.name.endswith("_powheg"):
                 dataset.add_tag("dy_powheg")
             # check if tautau events should be dropped due to the pythia bug in 2022/23 (done in the default selector)
-            if year in {2022, 2023} and not re.match(r"^dy_(tautau|ee|mumu)_.+$", dataset.name):
+            if year in {2022, 2023} and re.match(r"^dy_m50toinf_.+$", dataset.name):
                 dataset.add_tag("dy_drop_tautau")
             # the following block assigns tags necessary for year-dependent stitiching
             is_dy_inclusive = False
@@ -487,7 +492,11 @@ def add_config(
                 is_dy_inclusive = dataset.name == "dy_m50toinf_amcatnlo"
                 # tags for advanced, lepton based stitching in amcatnlo with m50toinf
                 if re.match(r"^dy(_.+)?_m50toinf(_.+)?_amcatnlo$", dataset.name):
-                    dataset.add_tag("dy_lep_amcatnlo_2223")  # lepton channel stitching in the default selector
+                    has_taufiltered_datasets = "dy_tautau_m50toinf_0j_filtered_amcatnlo" in dataset_names
+                    if not has_taufiltered_datasets:
+                        dataset.add_tag("dy_lep_amcatnlo_2223")  # lepton channel stitching in the default selector
+                    else:
+                        dataset.add_tag("dy_lep_taufilter_amcatnlo_2223")  # same, but including tau filtering
             elif year == 2024:
                 is_dy_inclusive = re.match(r"^dy_(tautau|ee|mumu)_m50toinf_amcatnlo$", dataset.name)
                 # tags for njet based stitching in amcatnlo
@@ -500,6 +509,9 @@ def add_config(
             # mark all datasets that could be dropped if not stitching
             if not is_dy_inclusive:
                 dataset.add_tag("dy_stitched")
+            # bypass dy stitching for datasets that contain only a single leaf process
+            if re.match(r"^dy_tautau_m50toinf_0j_filtered_amcatnlo$", dataset.name):
+                dataset.add_tag("bypass_subprocess_stitching")
         # w_lnu
         if dataset.name.startswith("w_lnu_"):
             dataset.add_tag("w_lnu")
@@ -630,12 +642,13 @@ def add_config(
             for kl, in cfg.x.hh_points.ggf
         ],
         "backgrounds": (backgrounds := [
-            "dy",
             "tt",
-            "v",
+            "dy",
+            "w_lnu",
             "st",
+            # "others"
             "multiboson",
-            "tt_multiboson",
+            "ewk",
             "h",
             "qcd",
         ]),
@@ -660,45 +673,50 @@ def add_config(
     if run == 3 and not sync_mode:
         # drell-yan, amcatnlo, using fully inclusive dataset
         if year in {2022, 2023} and "dy_m50toinf_amcatnlo" in cfg.datasets:
-            if cfg.datasets.n.dy_m50toinf_amcatnlo.has_tag("dy_drop_tautau"):
-                # more involved stitching with additional lepton enriched datasets
-                expand_lep = lambda names: [
-                    procs.get(f"dy_{ll}_{name}")
-                    for ll in ["ee", "mumu", "tautau"]
-                    for name in law.util.make_list(names)
-                ]
-                cfg.x.dy_lep_amcatnlo_2223_stitching = {
-                    "m50toinf": {
-                        "inclusive_dataset": cfg.datasets.n.dy_m50toinf_amcatnlo,
-                        "leaf_processes": [
-                            # the following processes cover the full njet and pt phasespace per lepton channel
-                            *expand_lep("m50toinf_0j"),
-                            *expand_lep([
-                                f"m50toinf_{nj}j_pt{pt}"
-                                for nj in [1, 2]
-                                for pt in ["0to40", "40to100", "100to200", "200to400", "400to600", "600toinf"]
-                            ]),
-                            *expand_lep("m50toinf_ge3j"),
-                        ],
-                    },
-                }
-            else:
-                # default stitching, without lepton enriched datasets
-                cfg.x.dy_amcatnlo_stitching = {
-                    "m50toinf": {
-                        "inclusive_dataset": cfg.datasets.n.dy_m50toinf_amcatnlo,
-                        "leaf_processes": [
-                            # the following processes cover the full njet and pt phasespace
-                            cfg.get_process("dy_m50toinf_0j"),
-                            *(
-                                cfg.get_process(f"dy_m50toinf_{nj}j_pt{pt}")
-                                for nj in [1, 2]
-                                for pt in ["0to40", "40to100", "100to200", "200to400", "400to600", "600toinf"]
-                            ),
-                            cfg.get_process("dy_m50toinf_ge3j"),
-                        ],
-                    },
-                }
+            def expand_lep(names, taufilter=False):
+                names = law.util.make_list(names)
+                leps = ["ee", "mumu"]
+                if not taufilter:
+                    leps.append("tautau")
+                # add plain names for ee/mumu
+                full_names = [procs.get(f"dy_{ll}_{n}") for ll in leps for n in names]
+                # add filtered/non-filtered names for tautau
+                if taufilter:
+                    flags = ["filtered", "nonfiltered"]
+                    full_names += [procs.get(f"dy_tautau_{n}_{f}") for n in names for f in flags]
+                return full_names
+            cfg.x.dy_lep_amcatnlo_2223_stitching = {
+                "m50toinf": {
+                    "inclusive_dataset": cfg.datasets.n.dy_m50toinf_amcatnlo,
+                    "leaf_processes": [
+                        # the following processes cover the full njet and pt phasespace per lepton channel
+                        *expand_lep("m50toinf_0j"),
+                        *expand_lep([
+                            f"m50toinf_{nj}j_pt{pt}"
+                            for nj in [1, 2]
+                            for pt in ["0to40", "40to100", "100to200", "200to400", "400to600", "600toinf"]
+                        ]),
+                        *expand_lep("m50toinf_ge3j"),
+                    ],
+                },
+            }
+            expand_lep_taufilter = functools.partial(expand_lep, taufilter=True)
+            cfg.x.dy_lep_taufilter_amcatnlo_2223_stitching = {
+                "m50toinf": {
+                    "inclusive_dataset": cfg.datasets.n.dy_m50toinf_amcatnlo,
+                    "leaf_processes": [
+                        # the following processes cover the full njet and pt phasespace per lepton channel
+                        *expand_lep_taufilter("m50toinf_0j"),
+                        *expand_lep_taufilter([
+                            f"m50toinf_{nj}j_pt{pt}"
+                            for nj in [1, 2]
+                            for pt in ["0to40", "40to100", "100to200", "200to400", "400to600", "600toinf"]
+                        ]),
+                        *expand_lep("m50toinf_ge3j"),
+                    ],
+                },
+            }
+
         # drell-yan, amcatnlo, for lepton-based inclusive datasets in 2024
         if year == 2024:
             for channel in ["tautau", "ee", "mumu"]:
@@ -715,6 +733,7 @@ def add_config(
                             ],
                         },
                     })
+
         # drell-yan, powheg
         if year == 2022 and "dy_ee_m50toinf_powheg" in cfg.datasets:
             cfg.x.dy_powheg_2223_stitching = {
@@ -732,7 +751,9 @@ def add_config(
                     ],
                 },
             }
+
         # w + jets
+        # TODO: 2024: w+jets stitching not needed? do we have all datasets?
         if year in {2022, 2023}:
             if "w_lnu_amcatnlo" in cfg.datasets:
                 cfg.x.w_lnu_amcatnlo_2223_stitching = {
@@ -750,6 +771,7 @@ def add_config(
                         ],
                     },
                 }
+
         # bbvv
         vv_decays = ["qqlnu", "2l2nu", "4q", "2q2nu", "4nu", "4l", "2l2q"]
         cfg.x.bbvv_stitching = {
@@ -770,7 +792,6 @@ def add_config(
                 ],
             }
             for kv, k2v, kl in cfg.x.hh_points.vbf
-
         }
 
     # dataset groups for conveniently looping over certain datasets
@@ -1929,7 +1950,7 @@ def add_config(
                 vnano=15,
                 era="24CDEReprocessingFGHIPrompt-Summer24",
                 pog_directories={"dc": "Collisions24"},
-                snapshot=CATSnapshot(btv="2026-03-10", dc="2026-05-27", egm="2025-12-15", jme="2026-07-16", lum="2026-04-15", muo="2026-06-18", tau="2026-01-14"),  # noqa: E501
+                snapshot=CATSnapshot(btv="2026-03-10", dc="2026-08-04", egm="2025-12-15", jme="2026-07-16", lum="2026-04-15", muo="2026-06-18", tau="2026-01-14"),  # noqa: E501
             ),
         }[(year, campaign.x.postfix, vnano)]
     else:
@@ -2255,11 +2276,8 @@ def add_config(
         add_external("tau_sf", (cat_info.get_file("tau", "tau.json.gz"), "v1"))
         # dy weight and recoil corrections
         # https://cms-higgs-leprare.docs.cern.ch/htt-common/V_recoil
-        if year == 2023:
-            # test for prod27
-            add_external("dy_weight_sf", (f"{central_hbt_dir}/custom_dy_files/hbt_corrections_test_prod27_23all.json.gz", "v1"))  # noqa: E501
-        else:
-            add_external("dy_weight_sf", (f"{central_hbt_dir}/custom_dy_files/hbt_corrections_v4.json.gz", "v4"))
+        dy_weight_version = 4 if year == 2024 else 4  # 2024 not yet available in new v5
+        add_external("dy_weight_sf", (f"{central_hbt_dir}/custom_dy_files/hbt_corrections_v{dy_weight_version}.json.gz", f"v{dy_weight_version}"))  # noqa: E501
         add_external("dy_recoil_sf", (f"{central_hbt_dir}/central_dy_files/Recoil_corrections_v5.json.gz", "v1"))
         # tau and trigger specific files are not consistent across 2022/2023 and 2024 yet
         trigger_sf_internal_subpath = f"AnalysisCore-{cclub_long_hash}/data/TriggerScaleFactors"
@@ -2406,7 +2424,7 @@ def add_config(
             # columns for typical dnn training
             "dnn": {
                 ColumnCollection.MANDATORY_COFFEA,
-                "tau2_isolated", "leptons_os", "process_id", "channel_id", "*_weight*",
+                "num_taus_iso", "leptons_os", "process_id", "channel_id", "*_weight*",
                 "Electron.{eta,phi,pt,mass,charge}",
                 "Muon.{eta,phi,pt,mass,charge}",
                 "Tau.{eta,phi,pt,mass,charge,decayMode}",
@@ -2624,47 +2642,31 @@ def add_config(
     ################################################################################################
 
     if split_2024_mc:
+        # for details see https://gist.github.com/riga/5aad795980919d23ea6b7df0502a999b
         if year not in {2024, 2025, 2026}:
             raise ValueError(f"MC splitting is not supported in {year}")
 
-        from columnflow.tasks.framework.mixins import ChunkedIOMixin
+        _splitter = None
 
-        # range section between 0 and 1000 that reflect the recorded luminosity of the year
-        lumi_ranges = {
-            2024: (0, 437),
-            2025: (437, 882),
-            2026: (882, 1000),
-        }
-
-        def _patch_uproot_uint64() -> None:
-            try:
-                import numpy as np
-                import uproot
-            except ImportError:
-                return
-
-            # add "uint64" conversion
-            py_lang_functions = uproot.language.python.PythonLanguage.default_functions
-            if "uint64" not in py_lang_functions:
-                py_lang_functions["uint64"] = np.uint64
-
-        def nano_read_options(task: ChunkedIOMixin, target: law.FileSystemFileTarget) -> dict[str, Any] | None:
+        def get_nano_filter_config(task, target) -> tuple[Callable[[ak.Array], np.ndarray], set[str]] | None:
+            # skip for data
             if task.dataset_inst.is_data:
                 return None
 
-            # for details see https://gist.github.com/riga/f9476f3b1477f1609683bea68ae64897
-            _patch_uproot_uint64()
-            return {
-                "aliases": {
-                    "split_mix_hash_1": "event + uint64(11400714819323198485)",
-                    "split_mix_hash_2": "(split_mix_hash_1 ^ (split_mix_hash_1 >> 30)) * uint64(13787848793156543929)",
-                    "split_mix_hash_3": "(split_mix_hash_2 ^ (split_mix_hash_2 >> 27)) * uint64(10723151780598845931)",
-                    "split_mix_hash": "split_mix_hash_3 ^ (split_mix_hash_3 >> 31)",
-                    "event_split_id": "split_mix_hash % 1000",
-                },
-                "cut": f"(event_split_id >= {lumi_ranges[year][0]}) & (event_split_id < {lumi_ranges[year][1]})",
-            }
+            # define splitting function and required column names for mc
+            def nano_filter_func(events: ak.Array) -> ak.Array | np.ndarray:
+                nonlocal _splitter
+                if _splitter is None:
+                    from columnflow.util import load_correction_set
+                    splitter_path = law.util.rel_path(__file__, "data", "mc_event_splitter.json.gz")
+                    _splitter = load_correction_set(splitter_path)["mc_event_splitter"]
+                return _splitter.evaluate(events.event) == year
 
-        cfg.x.get_nano_read_options = nano_read_options
+            columns = {"event"}
+
+            return nano_filter_func, columns
+
+        # register on config to be picked up by ChunkedIOMixin's
+        cfg.x.get_nano_filter_config = get_nano_filter_config
 
     return cfg

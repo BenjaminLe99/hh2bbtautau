@@ -7,6 +7,7 @@ Producers for evaluating torch-based models.
 from __future__ import annotations
 
 import functools
+import operator
 
 import law
 
@@ -54,11 +55,18 @@ class _external_dnn(Producer):
     # which type of btagging variables to use
     btag_type: BTagType = "pnet"
 
+    # whether the input should be fully canonicalized besides dilep phi rotation
+    # (px, py and pz flips)
+    canonicalize: bool = False
+
     # limited chunk size to avoid memory issues
     max_chunk_size: int = 10_000
 
-    # the empty value to insert to output columns in case of missing or broken values
-    empty_value: float = EMPTY_FLOAT
+    # empty value to insert into score output columns in case of missing or broken values
+    empty_score_value: float = EMPTY_FLOAT
+
+    # empty value to insert into feature output columns in case of missing or broken values
+    empty_column_value: float = EMPTY_FLOAT
 
     # optionally save input features
     produce_features: bool | None = None
@@ -200,27 +208,40 @@ class _external_dnn(Producer):
         self.define_categorical_inputs(events, cat)
         self.define_continuous_inputs(events, cont, cat)
 
-        # apply event mask to all features
-        event_mask = self.define_event_mask(events, cat, cont)
-        if (n_mask := ak.sum(event_mask)) == 0:
+        # compute the event mask
+        event_mask = np.asarray(self.define_event_mask(events, cat, cont))
+        n_mask = ak.sum(event_mask)
+
+        # check for non-finite continuous inputs
+        invalid = {}
+        for n, v in cont.items():
+            if (m := np.asarray(~np.isfinite(v[event_mask]))).any():
+                invalid[n] = m
+        if invalid:
+            msg = (
+                f"found {len(invalid)} continuous feature(s) in {n_mask} selected events with non-finite values:\n  - " +
+                "\n  - ".join(f"{n}: {m.sum()} event(s) -> {100 * m.mean():.2f}%" for n, m in invalid.items())
+            )
+            # when the union of events with any nan-input is above a threshold, raise an exception, otherwise just warn
+            # and amend the event mask
+            invalid_mask = functools.reduce(operator.or_, invalid.values())
+            if invalid_mask.sum() > 3 and invalid_mask.mean() >= 0.01:
+                raise Exception(msg)
+            task.logger.warning(f"{msg}\n  -> removing them from evaluation")
+            event_mask[event_mask] = ~invalid_mask
+            n_mask = ak.sum(event_mask)
+
+        # warn if no events are left
+        if n_mask == 0:
             task.logger.warning(
                 f"{self.cls_name}: 0 / {len(events)} selected for evaluation ({task.dataset_inst.name})",
             )
+
+        # apply to features
         for n, v in cont.items():
             cont[n] = v[event_mask]
         for n, v in cat.items():
             cat[n] = v[event_mask]
-
-        # check for non-finite continuous inputs
-        invalid_stats = {}
-        for n, v in cont.items():
-            if (m := np.asarray(~np.isfinite(v))).any():
-                invalid_stats[n] = m
-        if invalid_stats:
-            raise Exception(
-                f"found {len(invalid_stats)} continuous feature(s) in {n_mask} events with non-finite values:\n  - " +
-                "\n  - ".join(f"{n}: {m.sum()} -> {100 * m.mean():.2f}%" for n, m in invalid_stats.items()),
-            )
 
         # build continuous inputs
         continuous_inputs = np.concatenate(
@@ -250,11 +271,11 @@ class _external_dnn(Producer):
         # optionally store input features
         if self.produce_features:
             for name in cont:
-                values = self.empty_value * np.ones(len(events), dtype=np.float32)
+                values = self.empty_column_value * np.ones(len(events), dtype=np.float32)
                 values[event_mask] = ak.flatten(np.asarray(cont[name][..., None], dtype=np.float32))
                 events = set_ak_column_f32(events, f"{self.features_prefix}{self.cls_name}_{name}", values)
             for name in cat:
-                values = int(self.empty_value) * np.ones(len(events), dtype=np.int32)
+                values = int(self.empty_column_value) * np.ones(len(events), dtype=np.int32)
                 values[event_mask] = ak.flatten(np.asarray(cat[name][..., None], dtype=np.int32))
                 events = set_ak_column_i32(events, f"{self.features_prefix}{self.cls_name}_{name}", values)
 
@@ -364,6 +385,21 @@ class _external_dnn(Producer):
         cont.fatjet_px, cont.fatjet_py = rot(fatjet.px, fatjet.py)
         cont.fatjet_pz, cont.fatjet_e = fatjet.pz, fatjet.energy
 
+        # canonicalize
+        if self.canonicalize:
+            objs = ["met", "vis_tau1", "vis_tau2", "bjet1", "bjet2", "fatjet"]
+            # 1. force dilep eta to be positive: mirror particles on x-y plane, changing pz
+            flip_mask = (cont.vis_tau1_pz + cont.vis_tau2_pz) < 0
+            for obj in objs:
+                if obj != "met":
+                    pz = cont[f"{obj}_pz"]
+                    cont[f"{obj}_pz"] = np.where(flip_mask, -pz, pz)
+            # 2. force leading visible lepton to be positive in py, mirror particles on x-z plane, changing py
+            flip_mask = cont.vis_tau1_py < 0
+            for obj in objs:
+                py = cont[f"{obj}_py"]
+                cont[f"{obj}_py"] = np.where(flip_mask, -py, py)
+
         # mask values of various fields as done during training of the network
         def mask_fields(mask, value, *fields):
             if not ak.any(mask):
@@ -445,15 +481,15 @@ class _external_dnn(Producer):
                     "happen, so please debug",
                 )
             # warn for the remainder of cases
-            logger.warning(f"{msg}; setting them to {self.empty_value}")
-            scores[nan_mask] = self.empty_value
+            logger.warning(f"{msg}; setting them to {self.empty_score_value}")
+            scores[nan_mask] = self.empty_score_value
 
         return scores
 
     def store_scores(self, events: ak.Array, scores: Any, event_mask: ak.Array) -> ak.Array:
         # prepare output columns with the shape of the original events and assign values into them
         for i, column in enumerate(self.output_columns):
-            values = self.empty_value * np.ones(len(events), dtype=np.float32)
+            values = self.empty_score_value * np.ones(len(events), dtype=np.float32)
             values[event_mask] = scores[:, i]
             events = set_ak_column_f32(events, column, values)
 
@@ -508,7 +544,7 @@ class _e2e_dnn(_external_dnn):
 
         # store latent scores
         for i, column in enumerate(self.latent_output_columns):
-            values = self.empty_value * np.ones(len(events), dtype=np.float32)
+            values = self.empty_score_value * np.ones(len(events), dtype=np.float32)
             values[event_mask] = latent_scores[:, i]
             events = set_ak_column_f32(events, column, values)
 
