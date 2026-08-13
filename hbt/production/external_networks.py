@@ -207,6 +207,7 @@ class _external_dnn(Producer):
         cat = DotDict()
         self.define_categorical_inputs(events, cat)
         self.define_continuous_inputs(events, cont, cat)
+        cont, cat = self.update_features(events, cont, cat)
 
         # compute the event mask
         event_mask = np.asarray(self.define_event_mask(events, cat, cont))
@@ -444,6 +445,9 @@ class _external_dnn(Producer):
         cont.httfatjet_pz = cont.htt_pz + cont.fatjet_pz
         mask_fields(~has_fatjet, 0.0, "httfatjet_e", "httfatjet_px", "httfatjet_py", "httfatjet_pz")
 
+    def update_features(self, events, cont, cat):
+        return cont, cat
+
     def define_event_mask(self, events: ak.Array, cat: DotDict, cont: DotDict) -> ak.Array:
         return (
             np.isin(cat.pair_type, self.embedding_expected_inputs["pair_type"]) &
@@ -554,9 +558,45 @@ class _e2e_dnn(_external_dnn):
 class e2e_model1(_e2e_dnn):
     exposed = True
 
+class has_neutrinos(_external_dnn):
+    uses = _external_dnn.uses | {"reg_dnn_moe_nu*"}
+    require_producers = ["reg_dnn_moe"]
 
-class e2e_model1(_e2e_dnn):
+    def update_features(self, events, cont, cat):
+        cont, cat = super().update_features(events, cont, cat)
+        # add regressed neutrinos
+        cont.update({
+                f"nu{num}_{comp}": events[f"reg_dnn_moe_nu{num}_{comp}"]
+                for num in ("1", "2")
+                for comp in ("px", "py", "pz")
+            })
+        return cont, cat
+
+class subdivided_signal(_external_dnn):
+    def set_output_columns(self):
+        self.output_columns = [
+            f"{self.output_prefix}_{name}"
+            for name in ["dy", "tt", "hh"]
+        ]
+
+        # update produced columns
+        self.produces |= set(self.output_columns)
+
+    def store_scores(self, events: ak.Array, scores: Any, event_mask: ak.Array) -> ak.Array:
+        # if the signal class is subdivided, sum them into one hh class
+        # this assumes that classes are ordered as: dy, tt, kl0, kl1,...
+        scores[:, 2] = scores[:, 2:].sum(axis=1)
+
+        for i, column in enumerate(self.output_columns):
+            values = self.empty_value * np.ones(len(events), dtype=np.float32)
+            values[event_mask] = scores[:, i]
+            events = set_ak_column_f32(events, column, values)
+        return events
+
+class neutrinos_and_kappas(has_neutrinos, subdivided_signal):
     exposed = True
+
+# old classes below
 
 class torch_test_dnn_be(_external_dnn):
     exposed = True
@@ -770,39 +810,6 @@ class new_loss_implementation(_external_dnn):
 
 class new_implementation(_external_dnn):
     exposed = True
-
-class has_neutrinos(_external_dnn):
-    uses = _external_dnn.uses | {"reg_dnn_moe_nu*"}
-    require_producers = ["reg_dnn_moe"]
-
-    def update_features(self, cont, cat, events, phi_lep):
-        cont, cat = super().update_features(cont, cat, events, phi_lep)
-        # add regressed neutrinos
-        for num in ('1','2'):
-            for comp in ('px','py','pz'):
-                cont[f'nu{num}_{comp}'] = events[f'reg_dnn_moe_nu{num}_{comp}']
-        return cont, cat
-
-class subdivided_signal(_external_dnn):
-    def set_output_columns(self):
-        self.output_columns = [
-            f"{self.output_prefix}_{name}"
-            for name in ["dy", "tt", "hh"]
-        ]
-
-        # update produced columns
-        self.produces |= set(self.output_columns)
-
-    def store_scores(self, events: ak.Array, scores: Any, event_mask: ak.Array) -> ak.Array:
-        # if the signal class is subdivided, sum them into one hh class
-        # this assumes that classes are ordered as: dy, tt, kl0, kl1,...
-        scores[:, 2] = scores[:, 2:].sum(axis=1)
-
-        for i, column in enumerate(self.output_columns):
-            values = self.empty_value * np.ones(len(events), dtype=np.float32)
-            values[event_mask] = scores[:, i]
-            events = set_ak_column_f32(events, column, values)
-        return events
 
 class test_regressed_nu(has_neutrinos):
     exposed = True
